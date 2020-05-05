@@ -3,6 +3,7 @@ package ocr
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -62,8 +63,9 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 		return nil, err
 	}
 	if credentials.Endpoint == "" || credentials.Key == "" {
-		m := "No 'subscription_key' or 'endpoint' in " + credentialsFile
-		return nil, &authError{m}
+		err = fmt.Errorf("No 'subscription_key' or 'endpoint' in " +
+			credentialsFile)
+		return nil, err
 	}
 
 	base := credentials.Endpoint + uriVersion
