@@ -1,0 +1,7 @@
+# TigerOCR
+
+## Install
+
+```
+go install ./...
+```
