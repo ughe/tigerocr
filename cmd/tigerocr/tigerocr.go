@@ -34,28 +34,24 @@ func runService(image []byte, Service ocr.Client, dst string) (string, error) {
 	return fmt.Sprintf("%s:%v", name, result.Duration), nil
 }
 
-func runOCR(filename string, services map[string]ocr.Client, errchan chan error) {
+func runOCR(filename string, services map[string]ocr.Client) error {
 	file, err := os.Open(filename)
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
 	buf, err := ioutil.ReadAll(reader)
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	wd, err := os.Getwd()
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	namepath := path.Join(wd, filepath.Base(filename))
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 
 	log.Printf("Running: %v\n", filename)
@@ -71,11 +67,12 @@ func runOCR(filename string, services map[string]ocr.Client, errchan chan error)
 			ch <- true
 		}(service, Service, namepath, buf)
 	}
-	// Wait for each service
+	// Wait for each service to finish
 	for i := 0; i < len(services); i++ {
 		<-ch
 	}
-	errchan <- nil
+	// Sucess (even if sub-services error)
+	return nil
 }
 
 func main() {
@@ -115,13 +112,8 @@ func main() {
 		m["gcp"] = ocr.GCPClient{*keys}
 	}
 
-	ch := make(chan error, flag.NArg())
 	for _, filename := range flag.Args() {
-		go runOCR(filename, m, ch)
-	}
-	// Wait for every file to finish
-	for i := 0; i < flag.NArg(); i++ {
-		err = <-ch
+		err = runOCR(filename, m)
 		if err != nil {
 			log.Println(err)
 		}
