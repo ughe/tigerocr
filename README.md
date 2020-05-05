@@ -3,5 +3,5 @@
 ## Install
 
 ```
-go install ./...
+make
 ```

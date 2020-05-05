@@ -3,6 +3,11 @@
 *~
 \#*\#
 
+# CXX
+*.dSYM
+*.gch
+*.o
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
