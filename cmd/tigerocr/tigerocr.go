@@ -54,7 +54,6 @@ func runOCR(filename string, services map[string]ocr.Client) error {
 		return err
 	}
 
-	log.Printf("Running: %v\n", filename)
 	ch := make(chan bool, len(services))
 	for service, Service := range services {
 		go func(service string, Service ocr.Client, p string, img []byte) {
