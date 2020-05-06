@@ -16,7 +16,7 @@ golang:
 	mkdir -p $(BIN)/
 	go build -o $(BIN)/ ./...
 
-install:
+install: all
 	cp $(BIN)/* ${GOPATH}/bin/
 clean:
 	rm -rf $(objs)
