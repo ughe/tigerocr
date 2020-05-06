@@ -22,5 +22,5 @@ clean:
 	rm -rf $(objs)
 clobber: clean
 	rm -rf $(BIN)/*
-tar:
+tar: clobber
 	tar -czvf tigerocr.tar cmd/* editdist/* ocr/* go.* Makefile README.md
