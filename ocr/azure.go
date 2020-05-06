@@ -17,6 +17,8 @@ type azureClientCredentials struct {
 }
 
 type azureVisionResponse struct {
+	StatusCode  string        `json:"code,omitempty"`
+	StatusMsg   string        `json:"message,omitempty"`
 	Language    string        `json:"language"`
 	Oreintation string        `json:"orientation"`
 	Regions     []azureRegion `json:"regions"`
@@ -93,7 +95,14 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 		return nil, err
 	}
 	result := azureVisionResponse{}
-	json.Unmarshal(responseJson, &result)
+	err = json.Unmarshal(responseJson, &result)
+	if err != nil {
+		return nil, err
+	}
+	if result.StatusCode != "" {
+		err = fmt.Errorf("%v: %v", result.StatusCode, result.StatusMsg)
+		return nil, err
+	}
 
 	var lines []string
 	for i := 0; i < len(result.Regions); i++ {
