@@ -23,4 +23,4 @@ clean:
 clobber: clean
 	rm -rf $(BIN)/*
 tar: clobber
-	tar -czvf tigerocr.tar cmd/* editdist/* ocr/* go.* Makefile README.md
+	export COPYFILE_DISABLE=true && tar -czvf tigerocr.tar cmd/* editdist/* ocr/* go.* Makefile README.md
