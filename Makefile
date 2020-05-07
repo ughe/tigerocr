@@ -17,7 +17,7 @@ golang:
 	go build -o $(BIN)/ ./...
 
 install: all
-	cp $(BIN)/* ${GOPATH}/bin/
+	mv $(BIN)/* ${GOPATH}/bin/
 clean:
 	rm -rf $(objs)
 clobber: clean
