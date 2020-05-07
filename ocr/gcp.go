@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"path"
 	"time"
 
@@ -48,8 +47,12 @@ func (c GCPClient) Run(file []byte) (*Result, error) {
 	milli := int64(time.Since(start) / time.Millisecond)
 	if err != nil {
 		return nil, err
-	} else if annotation == nil {
-		return nil, fmt.Errorf("GCP DetectDocumentText returned nil")
+	}
+
+	// Extract full text
+	fullText := ""
+	if annotation != nil {
+		fullText = annotation.Text
 	}
 
 	date := fmtTime(start.UTC())
@@ -58,7 +61,7 @@ func (c GCPClient) Run(file []byte) (*Result, error) {
 	return &Result{
 		Service:  service,
 		Version:  version,
-		FullText: annotation.Text,
+		FullText: fullText,
 		Duration: milli,
 		Date:     date,
 		Raw:      encoded,
