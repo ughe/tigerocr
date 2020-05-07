@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"path"
 	"time"
 
@@ -47,6 +48,8 @@ func (c GCPClient) Run(file []byte) (*Result, error) {
 	milli := int64(time.Since(start) / time.Millisecond)
 	if err != nil {
 		return nil, err
+	} else if annotation == nil {
+		return nil, fmt.Errorf("GCP DetectDocumentText returned nil")
 	}
 
 	date := fmtTime(start.UTC())
