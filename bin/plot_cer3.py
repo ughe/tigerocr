@@ -14,22 +14,28 @@ def acclogs(logs, service):
     return {x[0].split(".")[0]: x[1] for x in logs if service in x[0]}
 def ceil(x, l):
     return x if x < l else l
-def plot_cer(title, dirname, fout, ceil=lambda x: x):
-    aws = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/aws.txt", "r").read().split("\n")]))
-    azu = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/azure.txt", "r").read().split("\n")]))
-    gcp = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/gcp.txt", "r").read().split("\n")]))
-    # Set of similar results
-    x = list(set(aws.keys()) & set(azu.keys()) & set(gcp.keys()))
-    print('len(x)', len(x))
-    awsy = [ceil(float(v)) for k, v in aws.items() if k in x]
-    azuy = [ceil(float(v)) for k, v in azu.items() if k in x]
-    gcpy = [ceil(float(v)) for k, v in gcp.items() if k in x]
+def plot_cer(title, dirname, fout, ceil=lambda x: x, precomp=False):
+    if not precomp:
+        aws = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/aws.txt", "r").read().split("\n")]))
+        azu = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/azure.txt", "r").read().split("\n")]))
+        gcp = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/gcp.txt", "r").read().split("\n")]))
+        # Set of similar results
+        x = list(set(aws.keys()) & set(azu.keys()) & set(gcp.keys()))
+        print('len(x)', len(x))
+        awsy = [ceil(float(v)) for k, v in aws.items() if k in x]
+        azuy = [ceil(float(v)) for k, v in azu.items() if k in x]
+        gcpy = [ceil(float(v)) for k, v in gcp.items() if k in x]
+    else:
+        awsy = [float(x) for x in open(dirname + "/aws.txt", "r").read().split("\n")]
+        azuy = [float(x) for x in open(dirname + "/azure.txt", "r").read().split("\n")]
+        gcpy = [float(x) for x in open(dirname + "/gcp.txt", "r").read().split("\n")]
+    rx = list(range(len(awsy)))
+    print('num points', len(rx))
 
     fig = plt.figure(figsize=(6, 6), dpi=300)
     fig.suptitle(title, size="xx-large")
     fig.subplots_adjust(hspace=1)
     fig.tight_layout()
-    rx = list(range(len(x)))
     ax1 = fig.add_subplot(311)
     ax1.set_title("AWS")
     ax1.yaxis.set_minor_locator(AutoMinorLocator(5))
@@ -62,14 +68,18 @@ def plot_cer(title, dirname, fout, ceil=lambda x: x):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4 or len(sys.argv) > 5:
-        print("usage: plot_cer3.py OA oa-lev out.png [1.0]")
+        print("usage: plot_cer3.py OA oa-lev out.png [1.0/PRECOMP]")
         print("       lev dir must contain: aws.txt azure.txt gcp.txt")
         sys.exit(1)
     name = sys.argv[1]
     logf = sys.argv[2]
     dst = sys.argv[3]
     ce = lambda x: x
+    precomp = False
     if len(sys.argv) == 5:
         c = sys.argv[4]
-        ce = lambda x: ceil(x, float(c))
-    plot_cer("OCR CER: " + name, logf, dst, ce)
+        if str(c)[0].isalpha():
+            precomp = True
+        else:
+            ce = lambda x: ceil(x, float(c))
+    plot_cer("OCR CER: " + name, logf, dst, ceil=ce, precomp=precomp)
