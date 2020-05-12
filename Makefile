@@ -21,6 +21,6 @@ install: all
 clean:
 	rm -rf $(objs)
 clobber: clean
-	rm -rf $(BIN)/*
+	ls $(BIN)/* | grep -v "\.py" | xargs rm
 tar: clobber
 	export COPYFILE_DISABLE=true && tar -czvf tigerocr.tar cmd/* editdist/* ocr/* go.* Makefile README.md

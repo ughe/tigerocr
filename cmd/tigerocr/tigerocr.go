@@ -102,13 +102,13 @@ func main() {
 
 	m := make(map[string]ocr.Client, 3)
 	if *awso {
-		m["aws"] = ocr.AWSClient{*keys}
+		m["aws"] = ocr.AWSClient{CredentialsPath: *keys}
 	}
 	if *azuo {
-		m["azure"] = ocr.AzureClient{*keys}
+		m["azure"] = ocr.AzureClient{CredentialsPath: *keys}
 	}
 	if *gcpo {
-		m["gcp"] = ocr.GCPClient{*keys}
+		m["gcp"] = ocr.GCPClient{CredentialsPath: *keys}
 	}
 
 	for _, filename := range flag.Args() {
