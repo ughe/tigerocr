@@ -350,11 +350,17 @@ int main(int argc, char *argv[]) {
   std::string a = read(argv[1]);
   std::string b = read(argv[2]);
 
+  std::vector<std::vector<int> > cost(a.size()+1, std::vector<int>(b.size()+1));
+  cos981::create_levenshtein_table(a, b, cost);
+  int dist = cost[a.size()][b.size()];
+
+  /*
   std::clock_t start = std::clock();
   std::pair<int, std::vector<cos981::Edit> > de = cos981::levenshtein(a, b);
   std::clock_t end = std::clock();
+  */
 
-  int dist = de.first;
+  // int dist = de.first;
   double cer = 0.0;
   if (dist != 0) {
     if (b.length() != 0) {
