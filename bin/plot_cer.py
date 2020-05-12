@@ -14,17 +14,16 @@ def acclogs(logs, service):
     return {x[0].split(".")[0]: x[1] for x in logs if service in x[0]}
 def ceil(x, l):
     return x if x < l else l
-def plot_time(title, filenamein, fout, ceil=lambda x: x):
-    logs = [x.split(":") for x in open(filenamein).read().split("\n")]
-    logs_aws = acclogs(logs, "aws")
-    logs_azure = acclogs(logs, "azure")
-    logs_gcp = acclogs(logs, "gcp")
-    # Exclusive logs
-    x = list(set(logs_aws.keys()) & set(logs_azure.keys()) & set(logs_gcp.keys()))
+def plot_cer(title, dirname, fout, ceil=lambda x: x):
+    aws = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/aws.txt", "r").read().split("\n")]))
+    azu = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/azure.txt", "r").read().split("\n")]))
+    gcp = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/gcp.txt", "r").read().split("\n")]))
+    # Set of similar results
+    x = list(set(aws.keys()) & set(azu.keys()) & set(gcp.keys()))
     print('len(x)', len(x))
-    awsy = [ceil(int(v)/1000) for k, v in logs_aws.items() if k in x]
-    azuy = [ceil(int(v)/1000) for k, v in logs_azure.items() if k in x]
-    gcpy = [ceil(int(v)/1000) for k, v in logs_gcp.items() if k in x]
+    awsy = [ceil(float(v)) for k, v in aws.items() if k in x]
+    azuy = [ceil(float(v)) for k, v in azu.items() if k in x]
+    gcpy = [ceil(float(v)) for k, v in gcp.items() if k in x]
 
     fig = plt.figure(figsize=(8, 3), dpi=300)
     fig.suptitle(title, size="xx-large")
@@ -34,7 +33,7 @@ def plot_time(title, filenamein, fout, ceil=lambda x: x):
     ax1.yaxis.set_minor_locator(AutoMinorLocator(5))
     ax1.xaxis.set_minor_locator(AutoMinorLocator(5))
     ax1.set_xlabel("Page Image Pointer")
-    ax1.set_ylabel("Seconds")
+    ax1.set_ylabel("Character Error Rate")
     rx = list(range(len(x)))
     ax1.scatter(rx, awsy, s=.4, color="orange", label="AWS")
     ax1.scatter(rx, azuy, s=.4, color="blue", label="Azure")
@@ -48,7 +47,8 @@ def plot_time(title, filenamein, fout, ceil=lambda x: x):
 
 if __name__ == "__main__":
     if len(sys.argv) < 4 or len(sys.argv) > 5:
-        print("usage: plot_time.py OA zlog.txt out.png [12]")
+        print("usage: plot_cer.py OA oa-lev out.png [1.0]")
+        print("       lev dir must contain: aws.txt azure.txt gcp.txt")
         sys.exit(1)
     name = sys.argv[1]
     logf = sys.argv[2]
@@ -56,5 +56,5 @@ if __name__ == "__main__":
     ce = lambda x: x
     if len(sys.argv) == 5:
         c = sys.argv[4]
-        ce = lambda x: ceil(x, int(c))
-    plot_time("OCR Time: " + name, logf, dst, ce)
+        ce = lambda x: ceil(x, float(c))
+    plot_cer("OCR CER: " + name, logf, dst, ce)
