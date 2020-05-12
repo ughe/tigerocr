@@ -4,6 +4,7 @@ srcs := $(patsubst %.cc,%,$(wildcard */*.cc))
 objs := $(patsubst %.cc,%.o,$(wildcard */*.cc))
 
 BIN = bin
+TMP = bin-tmp
 
 %.o: %.cc %.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -17,7 +18,10 @@ golang:
 	go build -o $(BIN)/ ./...
 
 install: all
-	mv $(BIN)/* ${GOPATH}/bin/
+	mkdir $(TMP)/
+	cp $(BIN)/* $(TMP)/
+	mv $(TMP)/* ${GOPATH}/bin/
+	rm -r $(TMP)/
 clean:
 	rm -rf $(objs)
 clobber: clean

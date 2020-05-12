@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 import matplotlib as mpl
