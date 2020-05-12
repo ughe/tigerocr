@@ -355,24 +355,17 @@ int main(int argc, char *argv[]) {
   std::clock_t end = std::clock();
 
   int dist = de.first;
-  std::vector<cos981::Edit> edits = de.second;
-  int elapsed_time = double(end - start) / CLOCKS_PER_SEC;
-  std::map<cos981::EditOp, int> s = stats(edits);
-
-  std::string sep;
-  for (int i = 0; i < edits.size(); ++i) {
-    cos981::EditOp eo = edits[i].second;
-    char c = edits[i].first;
-    // std::cerr << sep << "(" << c << ", " << to_string(eo) << ")";
-    std::cerr << sep << to_string(eo);
-    sep = ",";
+  double cer = 0.0;
+  if (dist != 0) {
+    if (b.length() != 0) {
+      cer = double(dist) / double(b.length());
+    } else {
+      cer = 1.0; // Any error when empty string expected
+    }
   }
-  std::cerr << std::endl << std::endl;
-  std::cerr << "Elapsed Time: " << elapsed_time << std::endl;
-  std::cerr << "Statistics: " << to_string(s) << std::endl;
-  std::cerr << std::endl << std::endl;
 
-  std::cout << dist << std::endl;
+  std::cout.precision(5);
+  std::cout << cer << std::endl;
 
   return 0;
 }
