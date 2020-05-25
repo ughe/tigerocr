@@ -14,16 +14,22 @@ def acclogs(logs, service):
     return {x[0].split(".")[0]: x[1] for x in logs if service in x[0]}
 def ceil(x, l):
     return x if x < l else l
-def plot_cer(title, dirname, fout, ceil=lambda x: x):
-    aws = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/aws.txt", "r").read().split("\n")]))
-    azu = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/azure.txt", "r").read().split("\n")]))
-    gcp = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/gcp.txt", "r").read().split("\n")]))
-    # Set of similar results
-    x = list(set(aws.keys()) & set(azu.keys()) & set(gcp.keys()))
-    print('len(x)', len(x))
-    awsy = [ceil(float(v)) for k, v in aws.items() if k in x]
-    azuy = [ceil(float(v)) for k, v in azu.items() if k in x]
-    gcpy = [ceil(float(v)) for k, v in gcp.items() if k in x]
+def plot_cer(title, dirname, fout, ceil=lambda x: x, precomp=False):
+    if not precomp:
+        aws = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/aws.txt", "r").read().split("\n")]))
+        azu = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/azure.txt", "r").read().split("\n")]))
+        gcp = dict(filter(lambda x: len(x)==2, [tuple(x.split(",")) for x in open(dirname + "/gcp.txt", "r").read().split("\n")]))
+        # Set of similar results
+        x = list(set(aws.keys()) & set(azu.keys()) & set(gcp.keys()))
+        print('len(x)', len(x))
+        awsy = [ceil(float(v)) for k, v in aws.items() if k in x]
+        azuy = [ceil(float(v)) for k, v in azu.items() if k in x]
+        gcpy = [ceil(float(v)) for k, v in gcp.items() if k in x]
+    else:
+        awsy = [ceil(float(v)) for k, v in aws.items() if k in x]
+        azuy = [ceil(float(v)) for k, v in azu.items() if k in x]
+        gcpy = [ceil(float(v)) for k, v in gcp.items() if k in x]
+    rx = list(range(len(x)))
 
     fig = plt.figure(figsize=(8, 3), dpi=300)
     fig.suptitle(title, size="xx-large")
@@ -34,7 +40,6 @@ def plot_cer(title, dirname, fout, ceil=lambda x: x):
     ax1.xaxis.set_minor_locator(AutoMinorLocator(5))
     ax1.set_xlabel("Page Image Pointer")
     ax1.set_ylabel("Character Error Rate")
-    rx = list(range(len(x)))
     ax1.scatter(rx, awsy, s=.4, color="orange", label="AWS")
     ax1.scatter(rx, azuy, s=.4, color="blue", label="Azure")
     ax1.scatter(rx, gcpy, s=.4, color="red", label="GCP")
