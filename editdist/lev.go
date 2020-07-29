@@ -8,10 +8,10 @@ func min(a int, b int) int {
 	}
 }
 
-func Levenshtein(a []byte, b []byte) int {
+func levenshtein(a []byte, b []byte) [][]int {
 	dist := make([][]int, len(a)+1);
+	dist[0] = make([]int, len(b)+1);
 	for j := 0; j < len(b)+1; j++ {
-		dist[0] = make([]int, len(b)+1);
 		dist[0][j] = j // First row
 	}
 	for i := 1; i < len(a)+1; i++ {
@@ -27,5 +27,9 @@ func Levenshtein(a []byte, b []byte) int {
 			dist[i][j] = min(sub, min(del, ins))
 		}
 	}
-	return dist[len(a)][len(b)]
+	return dist
+}
+
+func Levenshtein(a []byte, b []byte) int {
+	return levenshtein(a, b)[len(a)][len(b)]
 }
