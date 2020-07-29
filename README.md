@@ -3,7 +3,5 @@
 ## Install
 
 ```
-go mod download
-go get ./...
-make
+go build -o bin/ ./...
 ```

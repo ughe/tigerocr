@@ -1,3 +1,6 @@
+# bin
+bin/*
+
 # Developer
 .DS_Store
 *~
