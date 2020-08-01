@@ -35,3 +35,9 @@ tigerocr --help
 ```
 ocr_pdf.sh file.pdf
 ```
+
+## Export Src
+
+```
+tar -czvf tigerocr.tar cmd/* editdist/* ocr/* go.* scripts/* bin/.gitkeep requirements.txt
+```

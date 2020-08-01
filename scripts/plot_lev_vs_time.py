@@ -7,7 +7,7 @@ import os
 import sys
 import webbrowser
 
-def save(fig, fname, fopen=True):
+def save(fig, fname, fopen=False):
     fig.savefig("" + fname, bbox_inches="tight")
     if fopen:
         webbrowser.open_new("file://" + os.path.abspath("" + fname))
