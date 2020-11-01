@@ -6,8 +6,8 @@
 
 ```
 pip install -r requirements.txt
-go build -o bin/ ./...
-cp bin/* scripts/* $GOPATH/bin/
+go install ./...
+cp scripts/* $GOPATH/bin/
 ```
 
 ## Create Keys
