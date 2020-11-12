@@ -69,18 +69,12 @@ func readTAR(tarPath, header string) ([]byte, error) {
 // Append header to tarfile if header is not in tarfile already
 func appendTAR(tarfile string, header string, buf []byte) error {
 	_, err := os.Stat(tarfile)
-	isNew := err != nil
 	f, err := os.OpenFile(tarfile, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	if !isNew { // TODO experiment seeking past start
-		_, err = f.Seek(-512*2, os.SEEK_END)
-		if err != nil {
-			return err
-		}
-	}
+	f.Seek(-512*2, os.SEEK_END) // Ignore errors on seek (ie new file)
 	tw := tar.NewWriter(f)
 	defer tw.Close()
 	hdr := &tar.Header{Name: header, Mode: 0600, Size: int64(len(buf))}

@@ -52,51 +52,33 @@ func Line(img draw.Image, p0, p1 image.Point, c color.Color, weight int) {
 		}
 		return
 	}
-	// Use Bresenham's algorithm:
+	// Bresenham's algorithm directly from Wikipedia:
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-	// https://www.cl.cam.ac.uk/projects/raspberrypi/tutorials/os/screen02.html#lines
-	dx := abs(x1 - x0)
-	sx := 1 - btoi(x1 < x0)*2
-	dy := abs(y1 - y0)
-	sy := 1 - btoi(y1 < y0)*2
-	err := 0
-	if dx > dy {
-		for x0 != x1 {
-			Point(img, image.Point{x0, y0}, c, weight)
-			err += dx
-			if err*2 >= dy {
-				y0 += sy
-				err -= dy
-			}
-			x0 = x0 + sx
+	dx, dy := w, -h
+	sx, sy := 1, 1
+	if x1 < x0 {
+		sx = -1
+	}
+	if y1 < y0 {
+		sy = -1
+	}
+	x, y := x0, y0
+	acc := dx + dy
+	for {
+		Point(img, image.Point{x, y}, c, weight)
+		if x == x1 && y == y1 {
+			break
 		}
-	} else {
-		for y0 != y1 {
-			Point(img, image.Point{x0, y0}, c, weight)
-			err += dy
-			if err*2 >= dx {
-				x0 += sx
-				err -= dx
-			}
-			y0 = y0 + sy
+		acc2 := 2*acc
+		if acc2 >= dy {
+			acc += dy
+			x += sx
+		}
+		if acc2 <= dx {
+			acc += dx
+			y += sy
 		}
 	}
-
-	/*
-		for x0 != x1 && y0 != y1 {
-			img.Set(x0, y0, black)
-			err2 := err*2
-			if err2 >= dy {
-				x0 += sx
-				err += dy
-			}
-			if err2 <= dx {
-				y0 += sy
-				err += dx
-			}
-			i += 1
-		}
-	*/
 }
 
 func Rect(img draw.Image, p image.Point, w, h int, c color.Color, weight int) {
