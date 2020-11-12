@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path"
 	"time"
 
 	vision "cloud.google.com/go/vision/apiv1"
 	"google.golang.org/api/option"
+	pb "google.golang.org/genproto/googleapis/cloud/vision/v1"
 )
 
 type GCPClient struct {
@@ -70,17 +70,33 @@ func (c *GCPClient) Run(file []byte) (*Result, error) {
 	}, err
 }
 
-func boundingBox(poly *vision.BoundingPoly) (int, int, int, int, error) {
+func boundingBox(poly *pb.BoundingPoly) (int, int, int, int, error) {
 	if len(poly.Vertices) != 4 {
-		return 0, 0, 0, 0, errors.New(fmt.Sprintf(
-			"Expected 4 vertices. Found %d", len(poly.Vertices)))
+		return 0, 0, 0, 0, fmt.Errorf(
+			"Expected 4 vertices. Found %d", len(poly.Vertices))
+	}
+	minx, miny := poly.Vertices[0].X, poly.Vertices[0].Y
+	maxx, maxy := minx, miny
+	for _, v := range poly.Vertices {
+		if v.X < minx {
+			minx = v.X
+		}
+		if v.Y < miny {
+			miny = v.Y
+		}
+		if v.X > maxx {
+			maxx = v.X
+		}
+		if v.Y > maxy {
+			maxy = v.Y
+		}
 	}
 	// TODO: finish converting the poly to an integer
-	return 0, 0, 0, 0, nil
+	return int(minx), int(miny), int(maxx - minx), int(maxy - miny), nil
 }
 
 func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
-	var response vision.TextAnnotation
+	var response pb.TextAnnotation
 	err := json.Unmarshal(raw, &response)
 	if err != nil {
 		return nil, err
@@ -93,11 +109,26 @@ func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
 			for _, l := range r.Paragraphs {
 				words := make([]Word, 0, len(l.Words))
 				for _, w := range l.Words {
-					words = append(words, Word{w.Confidence, w.Bounds, w.String()})
+					x, y, width, height, err := boundingBox(w.BoundingBox)
+					if err != nil {
+						return nil, err
+					}
+					bounds := encodeBounds(x, y, width, height)
+					words = append(words, Word{w.Confidence, bounds, w.String()})
 				}
-				lines = append(lines, Line{l.Confidence, l.Bounds, words})
+				x, y, width, height, err := boundingBox(l.BoundingBox)
+				if err != nil {
+					return nil, err
+				}
+				bounds := encodeBounds(x, y, width, height)
+				lines = append(lines, Line{l.Confidence, bounds, words})
 			}
-			regions = append(regions, Region{r.Confidence, r.Bounds, lines})
+			x, y, width, height, err := boundingBox(r.BoundingBox)
+			if err != nil {
+				return nil, err
+			}
+			bounds := encodeBounds(x, y, width, height)
+			regions = append(regions, Region{r.Confidence, bounds, lines})
 		}
 	}
 	return &Detection{regions}, nil
