@@ -41,9 +41,9 @@ func TestLevenshtein(t *testing.T) {
 	}
 }
 
-func  check(t *testing.T, as string, bs string, exp int) {
-	a := []byte(as);
-	b := []byte(bs);
+func check(t *testing.T, as string, bs string, exp int) {
+	a := []byte(as)
+	b := []byte(bs)
 	dists := levenshtein(a, b)
 	dist := dists[len(a)][len(b)]
 	if exp != dist {
