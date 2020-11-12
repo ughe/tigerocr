@@ -1,7 +1,15 @@
 package ocr
 
 import (
+	"bytes"
+	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/jpeg"
 	"time"
+
+	"github.com/ughe/tigerocr/bresenham"
 )
 
 type Result struct {
@@ -22,7 +30,7 @@ func fmtTime(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05 MST")
 }
 
-func Annotate(src []byte, response *Detection) ([]byte, error) {
+func Annotate(src []byte, response *Detection, c color.Color) ([]byte, error) {
 	m, _, err := image.Decode(bytes.NewReader(src))
 	if err != nil {
 		return nil, err
@@ -30,13 +38,12 @@ func Annotate(src []byte, response *Detection) ([]byte, error) {
 	img := image.NewRGBA(m.Bounds())
 	draw.Draw(img, img.Bounds(), m, image.ZP, draw.Src)
 	for _, region := range response.Regions {
-		x, y, w, h, err := parseBounds(region.Bounds)
+		x, y, w, h, err := decodeBounds(region.Bounds)
 		if err != nil {
 			return nil, err
 		}
 		fmt.Printf("We found a region: (%d, %d) (%d, %d)\n", x, y, w, h)
-		blue := color.RGBA{0, 0, 255, 255}
-		bresenham.Rect(img, image.Point{x, y}, w, h, blue)
+		bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
 	}
 	buf := new(bytes.Buffer)
 	err = jpeg.Encode(buf, img, nil)

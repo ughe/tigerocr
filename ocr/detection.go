@@ -1,5 +1,12 @@
 package ocr
 
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+)
+
 type Detection struct {
 	Regions []Region `json:"regions"`
 }

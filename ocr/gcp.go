@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"path"
 	"time"
 
@@ -68,12 +70,13 @@ func (c *GCPClient) Run(file []byte) (*Result, error) {
 	}, err
 }
 
-func boundingBox(poly *vision.BoundingPoly) (int, int, int, int, err) {
+func boundingBox(poly *vision.BoundingPoly) (int, int, int, int, error) {
 	if len(poly.Vertices) != 4 {
 		return 0, 0, 0, 0, errors.New(fmt.Sprintf(
 			"Expected 4 vertices. Found %d", len(poly.Vertices)))
 	}
 	// TODO: finish converting the poly to an integer
+	return 0, 0, 0, 0, nil
 }
 
 func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
@@ -83,7 +86,7 @@ func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
 		return nil, err
 	}
 
-	regions := make([]Region)
+	regions := make([]Region, 0, 3)
 	for _, p := range response.Pages {
 		for _, r := range p.Blocks {
 			lines := make([]Line, 0, len(r.Paragraphs))

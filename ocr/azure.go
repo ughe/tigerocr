@@ -3,20 +3,12 @@ package ocr
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"image"
-	"image/color"
-	"image/draw"
-	"image/jpeg"
 	"io/ioutil"
 	"net/http"
 	"path"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/ughe/tigerocr/bresenham"
 )
 
 type azureClientCredentials struct {
