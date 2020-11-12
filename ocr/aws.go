@@ -82,24 +82,36 @@ func (c *AWSClient) Run(image []byte) (*Result, error) {
 	}, err
 }
 
-func (c *AWSClient) RawToDetection(raw []byte) (*Detection, error) {
-	var response azureVisionResponse
+func geometryToBox(g *textract.Geometry, wi, hi int) (string, error) {
+	b := g.BoundingBox
+	w, h := float64(wi), float64(hi)
+	return encodeBounds(int(*b.Left*w+.5), int(*b.Top*h+.5),
+		int(*b.Width*w+.5), int(*b.Height*h+.5)), nil
+}
+
+func (c *AWSClient) RawToDetection(raw []byte, w, h int) (*Detection, error) {
+	var response textract.DetectDocumentTextOutput
 	err := json.Unmarshal(raw, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	regions := make([]Region, 0, len(response.Regions))
-	for _, r := range response.Regions {
-		lines := make([]Line, 0, len(r.Lines))
-		for _, l := range r.Lines {
-			words := make([]Word, 0, len(l.Words))
-			for _, w := range words {
-				words = append(words, Word{1.0, w.Bounds, w.Text})
+	/*
+		regions := make([]Region, 0, len(response.Blocks))
+		for _, b := range response.Blocks {
+			if *b.BlockType == "LINE" {
+				lines := make([]Line, 0, len(r.Lines))
+				for _, l := range r.Lines {
+					words := make([]Word, 0, len(l.Words))
+					for _, w := range words {
+						words = append(words, Word{w.Confidence, w.Bounds, w.Text})
+					}
+					lines = append(lines, Line{l.Confidence, l.Bounds, words})
+				}
+				regions = append(regions, Region{r.Confidence, r.Bounds, lines})
 			}
-			lines = append(lines, Line{1.0, l.Bounds, words})
 		}
-		regions = append(regions, Region{1.0, r.Bounds, lines})
-	}
-	return &Detection{regions}, nil
+		return &Detection{regions}, nil
+	*/
+	return nil, err // TODO AWS is more complicated (since we need to match relationship ids of words to lines)
 }

@@ -70,10 +70,9 @@ func (c *GCPClient) Run(file []byte) (*Result, error) {
 	}, err
 }
 
-func boundingBox(poly *pb.BoundingPoly) (int, int, int, int, error) {
+func polyToBox(poly *pb.BoundingPoly) (string, error) {
 	if len(poly.Vertices) != 4 {
-		return 0, 0, 0, 0, fmt.Errorf(
-			"Expected 4 vertices. Found %d", len(poly.Vertices))
+		return "", fmt.Errorf("Found %d != 4 vertices", len(poly.Vertices))
 	}
 	minx, miny := poly.Vertices[0].X, poly.Vertices[0].Y
 	maxx, maxy := minx, miny
@@ -91,8 +90,7 @@ func boundingBox(poly *pb.BoundingPoly) (int, int, int, int, error) {
 			maxy = v.Y
 		}
 	}
-	// TODO: finish converting the poly to an integer
-	return int(minx), int(miny), int(maxx - minx), int(maxy - miny), nil
+	return encodeBounds(int(minx), int(miny), int(maxx-minx), int(maxy-miny)), nil
 }
 
 func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
@@ -109,25 +107,22 @@ func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
 			for _, l := range r.Paragraphs {
 				words := make([]Word, 0, len(l.Words))
 				for _, w := range l.Words {
-					x, y, width, height, err := boundingBox(w.BoundingBox)
+					bounds, err := polyToBox(w.BoundingBox)
 					if err != nil {
 						return nil, err
 					}
-					bounds := encodeBounds(x, y, width, height)
 					words = append(words, Word{w.Confidence, bounds, w.String()})
 				}
-				x, y, width, height, err := boundingBox(l.BoundingBox)
+				bounds, err := polyToBox(l.BoundingBox)
 				if err != nil {
 					return nil, err
 				}
-				bounds := encodeBounds(x, y, width, height)
 				lines = append(lines, Line{l.Confidence, bounds, words})
 			}
-			x, y, width, height, err := boundingBox(r.BoundingBox)
+			bounds, err := polyToBox(r.BoundingBox)
 			if err != nil {
 				return nil, err
 			}
-			bounds := encodeBounds(x, y, width, height)
 			regions = append(regions, Region{r.Confidence, bounds, lines})
 		}
 	}
