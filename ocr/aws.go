@@ -18,7 +18,7 @@ type AWSClient struct {
 // Method required by ocr.Client
 // Returns AWS document text detection Result
 // Reference: https://docs.aws.amazon.com/textract/
-func (c *AWSClient) Run(image []byte) (*Result, error) {
+func (c AWSClient) Run(image []byte) (*Result, error) {
 	const (
 		service    = "AWS"
 		keyName    = "credentials"
@@ -89,7 +89,8 @@ func geometryToBox(g *textract.Geometry, wi, hi int) (string, error) {
 		int(*b.Width*w+.5), int(*b.Height*h+.5)), nil
 }
 
-func (c *AWSClient) RawToDetection(raw []byte, w, h int) (*Detection, error) {
+// TODO: AWS does not keep the width and height. Need to change signature
+func (_ AWSClient) RawToDetection(raw []byte) (*Detection, error) {
 	var response textract.DetectDocumentTextOutput
 	err := json.Unmarshal(raw, &response)
 	if err != nil {

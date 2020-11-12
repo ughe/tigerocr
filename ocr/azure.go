@@ -46,7 +46,7 @@ type AzureClient struct {
 // Method required by ocr.Client
 // Returns Azure document text detection Result
 // Example: https://docs.microsoft.com/en-us/azure/cognitive-services/computer-vision/quickstarts/go-print-text
-func (c *AzureClient) Run(image []byte) (*Result, error) {
+func (c AzureClient) Run(image []byte) (*Result, error) {
 	const (
 		service     = "Azure"
 		keyName     = "azure.json"
@@ -132,7 +132,7 @@ func (c *AzureClient) Run(image []byte) (*Result, error) {
 	}, err
 }
 
-func (c *AzureClient) RawToDetection(raw []byte) (*Detection, error) {
+func (_ AzureClient) RawToDetection(raw []byte) (*Detection, error) {
 	var response azureVisionResponse
 	err := json.Unmarshal(raw, &response)
 	if err != nil {

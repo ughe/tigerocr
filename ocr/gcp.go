@@ -20,7 +20,7 @@ type GCPClient struct {
 // Method required by ocr.Client
 // Returns GCP document text detection Result
 // Reference: https://cloud.google.com/vision/docs/apis
-func (c *GCPClient) Run(file []byte) (*Result, error) {
+func (c GCPClient) Run(file []byte) (*Result, error) {
 	const (
 		service = "GCP"
 		version = "v1"
@@ -93,7 +93,7 @@ func polyToBox(poly *pb.BoundingPoly) (string, error) {
 	return encodeBounds(int(minx), int(miny), int(maxx-minx), int(maxy-miny)), nil
 }
 
-func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
+func (_ GCPClient) RawToDetection(raw []byte) (*Detection, error) {
 	var response pb.TextAnnotation
 	err := json.Unmarshal(raw, &response)
 	if err != nil {
