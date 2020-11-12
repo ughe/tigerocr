@@ -18,7 +18,7 @@ type AWSClient struct {
 // Method required by ocr.Client
 // Returns AWS document text detection Result
 // Reference: https://docs.aws.amazon.com/textract/
-func (c AWSClient) Run(image []byte) (*Result, error) {
+func (c *AWSClient) Run(image []byte) (*Result, error) {
 	const (
 		service    = "AWS"
 		keyName    = "credentials"
@@ -80,4 +80,26 @@ func (c AWSClient) Run(image []byte) (*Result, error) {
 		Date:     date,
 		Raw:      encoded,
 	}, err
+}
+
+func (c *AzureClient) RawToDetection(raw []byte) (*Detection, error) {
+	var response azureVisionResponse
+	err := json.Unmarshal(raw, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	regions := make([]Region, 0, len(response.Regions))
+	for _, r := range response.Regions {
+		lines := make([]Line, 0, len(r.Lines))
+		for _, l := range r.Lines {
+			words := make([]Word, 0, len(l.Words))
+			for _, w := range words {
+				words = append(words, Word{1.0, w.Bounds, w.Text})
+			}
+			lines = append(lines, Line{1.0, l.Bounds, words})
+		}
+		regions = append(regions, Region{1.0, r.Bounds, lines})
+	}
+	return &Detection{regions}, nil
 }

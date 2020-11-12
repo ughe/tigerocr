@@ -18,7 +18,7 @@ type GCPClient struct {
 // Method required by ocr.Client
 // Returns GCP document text detection Result
 // Reference: https://cloud.google.com/vision/docs/apis
-func (c GCPClient) Run(file []byte) (*Result, error) {
+func (c *GCPClient) Run(file []byte) (*Result, error) {
 	const (
 		service = "GCP"
 		version = "v1"
@@ -66,4 +66,36 @@ func (c GCPClient) Run(file []byte) (*Result, error) {
 		Date:     date,
 		Raw:      encoded,
 	}, err
+}
+
+func boundingBox(poly *vision.BoundingPoly) (int, int, int, int, err) {
+	if len(poly.Vertices) != 4 {
+		return 0, 0, 0, 0, errors.New(fmt.Sprintf(
+			"Expected 4 vertices. Found %d", len(poly.Vertices)))
+	}
+	// TODO: finish converting the poly to an integer
+}
+
+func (c *GCPClient) RawToDetection(raw []byte) (*Detection, error) {
+	var response vision.TextAnnotation
+	err := json.Unmarshal(raw, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	regions := make([]Region)
+	for _, p := range response.Pages {
+		for _, r := range p.Blocks {
+			lines := make([]Line, 0, len(r.Paragraphs))
+			for _, l := range r.Paragraphs {
+				words := make([]Word, 0, len(l.Words))
+				for _, w := range l.Words {
+					words = append(words, Word{w.Confidence, w.Bounds, w.String()})
+				}
+				lines = append(lines, Line{l.Confidence, l.Bounds, words})
+			}
+			regions = append(regions, Region{r.Confidence, r.Bounds, lines})
+		}
+	}
+	return &Detection{regions}, nil
 }

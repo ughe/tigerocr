@@ -55,8 +55,10 @@ func main() {
 		log.Fatalf("Failed to read json: %v", err)
 	}
 
-	var response ocr.AzureVisionResponse
-	json.Unmarshal(jsn, &response)
+	response, err := AzureClient.RawToDetection(jsn)
+	if err != nil {
+		log.Fatalf("Failed to convert raw json to detection: %v", err)
+	}
 	result, err := ocr.Annotate(img, response)
 	if err != nil {
 		log.Fatalf("Failed to annotate img: %v", err)

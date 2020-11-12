@@ -24,7 +24,7 @@ type azureClientCredentials struct {
 	Endpoint string `json:"endpoint"`
 }
 
-type AzureVisionResponse struct {
+type azureVisionResponse struct {
 	StatusCode  string        `json:"code,omitempty"`
 	StatusMsg   string        `json:"message,omitempty"`
 	Language    string        `json:"language"`
@@ -51,55 +51,10 @@ type AzureClient struct {
 	CredentialsPath string
 }
 
-func parseBounds(bounds string) (int, int, int, int, error) {
-	s := strings.SplitN(bounds, ",", 4)
-	if len(s) != 4 {
-		return 0, 0, 0, 0, errors.New(fmt.Sprintf("Expected 4 coordinates. Found %d", len(s)))
-	}
-	x0, err := strconv.ParseInt(s[0], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	y0, err := strconv.ParseInt(s[1], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	x1, err := strconv.ParseInt(s[2], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	y1, err := strconv.ParseInt(s[3], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	return int(x0), int(y0), int(x1), int(y1), nil
-}
-
-func Annotate(src []byte, response AzureVisionResponse) ([]byte, error) {
-	m, _, err := image.Decode(bytes.NewReader(src))
-	if err != nil {
-		return nil, err
-	}
-	img := image.NewRGBA(m.Bounds())
-	draw.Draw(img, img.Bounds(), m, image.ZP, draw.Src)
-	for _, region := range response.Regions {
-		x, y, w, h, err := parseBounds(region.Bounds)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("We found a region: (%d, %d) (%d, %d)\n", x, y, w, h)
-		blue := color.RGBA{0, 0, 255, 255}
-		bresenham.Rect(img, image.Point{x, y}, w, h, blue)
-	}
-	buf := new(bytes.Buffer)
-	err = jpeg.Encode(buf, img, nil)
-	return buf.Bytes(), nil
-}
-
 // Method required by ocr.Client
 // Returns Azure document text detection Result
 // Example: https://docs.microsoft.com/en-us/azure/cognitive-services/computer-vision/quickstarts/go-print-text
-func (c AzureClient) Run(image []byte) (*Result, error) {
+func (c *AzureClient) Run(image []byte) (*Result, error) {
 	const (
 		service     = "Azure"
 		keyName     = "azure.json"
@@ -147,7 +102,7 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := AzureVisionResponse{}
+	result := azureVisionResponse{}
 	err = json.Unmarshal(responseJson, &result)
 	if err != nil {
 		return nil, err
@@ -183,4 +138,26 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 		Date:     date,
 		Raw:      encoded,
 	}, err
+}
+
+func (c *AzureClient) RawToDetection(raw []byte) (*Detection, error) {
+	var response azureVisionResponse
+	err := json.Unmarshal(raw, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	regions := make([]Region, 0, len(response.Regions))
+	for _, r := range response.Regions {
+		lines := make([]Line, 0, len(r.Lines))
+		for _, l := range r.Lines {
+			words := make([]Word, 0, len(l.Words))
+			for _, w := range l.Words {
+				words = append(words, Word{1.0, w.Bounds, w.Text})
+			}
+			lines = append(lines, Line{1.0, l.Bounds, words})
+		}
+		regions = append(regions, Region{1.0, r.Bounds, lines})
+	}
+	return &Detection{regions}, nil
 }
