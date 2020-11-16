@@ -93,7 +93,7 @@ func polyToBox(poly *pb.BoundingPoly) (string, error) {
 	return encodeBounds(int(minx), int(miny), int(maxx-minx), int(maxy-miny)), nil
 }
 
-func (_ GCPClient) RawToDetection(raw []byte) (*Detection, error) {
+func (_ GCPClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
 	var response pb.TextAnnotation
 	err := json.Unmarshal(raw, &response)
 	if err != nil {

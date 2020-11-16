@@ -2,6 +2,7 @@ package ocr
 
 import (
 	"encoding/json"
+	"fmt"
 	"path"
 	"strings"
 	"time"
@@ -82,37 +83,94 @@ func (c AWSClient) Run(image []byte) (*Result, error) {
 	}, err
 }
 
-func geometryToBox(g *textract.Geometry, wi, hi int) (string, error) {
+func geometryToBox(g *textract.Geometry, wi, hi int) string {
 	b := g.BoundingBox
 	w, h := float64(wi), float64(hi)
 	return encodeBounds(int(*b.Left*w+.5), int(*b.Top*h+.5),
-		int(*b.Width*w+.5), int(*b.Height*h+.5)), nil
+		int(*b.Width*w+.5), int(*b.Height*h+.5))
 }
 
-// TODO: AWS does not keep the width and height. Need to change signature
-func (_ AWSClient) RawToDetection(raw []byte) (*Detection, error) {
+func relsToIds(rels []*textract.Relationship) ([]*string, error) {
+	for _, rel := range rels {
+		// Invariant: len(r.Relationships) <= 2 because Type is {CHILD, VALUE}
+		switch *rel.Type {
+		case "CHILD":
+			return rel.Ids, nil
+		case "VALUE":
+			continue
+		default:
+			return nil, fmt.Errorf("Invalid format type: %v", *rel.Type)
+		}
+	}
+	return nil, nil // No error on empty
+}
+
+func (_ AWSClient) RawToDetection(raw []byte, width, height int) (*Detection, error) {
 	var response textract.DetectDocumentTextOutput
 	err := json.Unmarshal(raw, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	/*
-		regions := make([]Region, 0, len(response.Blocks))
-		for _, b := range response.Blocks {
-			if *b.BlockType == "LINE" {
-				lines := make([]Line, 0, len(r.Lines))
-				for _, l := range r.Lines {
-					words := make([]Word, 0, len(l.Words))
-					for _, w := range words {
-						words = append(words, Word{w.Confidence, w.Bounds, w.Text})
-					}
-					lines = append(lines, Line{l.Confidence, l.Bounds, words})
-				}
-				regions = append(regions, Region{r.Confidence, r.Bounds, lines})
-			}
+	mpages := make([]textract.Block, 0)
+	blocks := make(map[string]*textract.Block)
+
+	for _, b := range response.Blocks {
+		switch *b.BlockType {
+		case "PAGE":
+			mpages = append(mpages, *b)
+		case "LINE":
+			blocks[*b.Id] = b
+		case "WORD":
+			blocks[*b.Id] = b
+		default:
+			return nil, fmt.Errorf("Invalid BlockType: %v", *b.BlockType)
 		}
-		return &Detection{regions}, nil
-	*/
-	return nil, err // TODO AWS is more complicated (since we need to match relationship ids of words to lines)
+	}
+
+	regions := make([]Region, 0, len(mpages))
+	for _, r := range mpages {
+		ids, err := relsToIds(r.Relationships)
+		if err != nil {
+			return nil, err
+		}
+		if ids == nil {
+			continue
+		}
+		lines := make([]Line, 0, len(ids))
+		for _, id := range ids {
+			l, ok := blocks[*id]
+			if !ok {
+				return nil, fmt.Errorf("Line %v not found", *id)
+			}
+			ids, err := relsToIds(l.Relationships)
+			if err != nil {
+				return nil, err
+			}
+			if ids == nil {
+				continue
+			}
+			words := make([]Word, 0, len(ids))
+			for _, id := range ids {
+				w, ok := blocks[*id]
+				if !ok {
+					return nil, fmt.Errorf("Word %v not found", *id)
+				}
+				words = append(words, Word{float32(*w.Confidence), geometryToBox(w.Geometry, width, height), *w.Text})
+			}
+			lines = append(lines, Line{float32(*l.Confidence), geometryToBox(l.Geometry, width, height), words})
+		}
+		conf := float32(0.0)
+		if r.Confidence != nil {
+			conf = float32(*r.Confidence)
+		} else {
+			// Mean of lines
+			for _, l := range lines {
+				conf += l.Confidence
+			}
+			conf /= float32(len(lines))
+		}
+		regions = append(regions, Region{conf, geometryToBox(r.Geometry, width, height), lines})
+	}
+	return &Detection{regions}, nil
 }

@@ -132,7 +132,7 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	}, err
 }
 
-func (_ AzureClient) RawToDetection(raw []byte) (*Detection, error) {
+func (_ AzureClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
 	var response azureVisionResponse
 	err := json.Unmarshal(raw, &response)
 	if err != nil {
