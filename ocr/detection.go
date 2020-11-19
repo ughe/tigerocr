@@ -32,6 +32,13 @@ type Word struct {
 	Text       string  `json:"text"`
 }
 
+type Bounds struct {
+	X int
+	Y int
+	W int
+	H int
+}
+
 func encodeBounds(x, y, w, h int) string {
 	return fmt.Sprintf("%d,%d,%d,%d", x, y, w, h)
 }
@@ -59,4 +66,46 @@ func decodeBounds(bounds string) (int, int, int, int, error) {
 		return 0, 0, 0, 0, err
 	}
 	return int(x0), int(y0), int(x1), int(y1), nil
+}
+
+// Returns true if two intervals intersect
+func intersects(left0, right0, left1, right1 int) bool {
+	// Invariant: left0 <= right0 && left1 <= right1
+	if left0 <= left1 {
+		return right0 >= left1
+	} else {
+		return left0 <= right1
+	}
+}
+
+// Returns true if the rectangles overlap. Rectangles have (x,y) and (width, height)
+func overlaps(b0, b1 Bounds) bool {
+	return (intersects(b0.X, b0.X+b0.W, b1.X, b1.X+b1.W) &&
+		intersects(b0.Y, b0.Y+b0.H, b1.Y, b1.Y+b1.H))
+}
+
+func intersectionLen(left0, right0, left1, right1 int) int {
+	if left0 <= left1 {
+		if right0 <= left1 {
+			return 0
+		} else if right0 <= right1 {
+			return right0 - left1
+		} else {
+			return right1 - left1
+		}
+	} else { // left0 > left1
+		if left0 >= right1 {
+			return 0
+		} else if right0 <= right1 {
+			return right0 - left0
+		} else {
+			return right1 - left0
+		}
+	}
+}
+
+// Returns the area of the overlap
+func intersectionArea(b0, b1 Bounds) int {
+	return (intersectionLen(b0.X, b0.X+b0.W, b1.X, b1.X+b1.W) *
+		intersectionLen(b0.Y, b0.Y+b0.H, b1.Y, b1.Y+b1.H))
 }
