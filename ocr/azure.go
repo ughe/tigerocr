@@ -132,9 +132,9 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	}, err
 }
 
-func (_ AzureClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
+func (_ AzureClient) ResultToDetection(result *Result, _, _ int) (*Detection, error) {
 	var response azureVisionResponse
-	err := json.Unmarshal(raw, &response)
+	err := json.Unmarshal(result.Raw, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -151,5 +151,7 @@ func (_ AzureClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
 		}
 		regions = append(regions, Region{1.0, r.Bounds, lines})
 	}
-	return &Detection{regions}, nil
+	algoID := strings.ToLower(result.Service) + ":" + result.Version
+	millis := uint32(result.Duration)
+	return &Detection{algoID, result.Date, millis, regions}, nil
 }

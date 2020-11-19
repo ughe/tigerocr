@@ -8,24 +8,27 @@ import (
 )
 
 type Detection struct {
+	AlgoID  string   `json:"algo"`
+	Date    string   `json:"date"`
+	Millis  uint32   `json:"millis"`
 	Regions []Region `json:"regions"`
 }
 
 type Region struct {
 	Confidence float32 `json:"conf"`
-	Bounds     string  `json:"boundingBox"`
+	Bounds     string  `json:"xywh"`
 	Lines      []Line  `json:"lines"`
 }
 
 type Line struct {
 	Confidence float32 `json:"conf"`
-	Bounds     string  `json:"boundingBox"`
+	Bounds     string  `json:"xywh"`
 	Words      []Word  `json:"words"`
 }
 
 type Word struct {
 	Confidence float32 `json:"conf"`
-	Bounds     string  `json:"boundingBox"`
+	Bounds     string  `json:"xywh"`
 	Text       string  `json:"text"`
 }
 

@@ -105,9 +105,9 @@ func relsToIds(rels []*textract.Relationship) ([]*string, error) {
 	return nil, nil // No error on empty
 }
 
-func (_ AWSClient) RawToDetection(raw []byte, width, height int) (*Detection, error) {
+func (_ AWSClient) ResultToDetection(result *Result, width, height int) (*Detection, error) {
 	var response textract.DetectDocumentTextOutput
-	err := json.Unmarshal(raw, &response)
+	err := json.Unmarshal(result.Raw, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -172,5 +172,8 @@ func (_ AWSClient) RawToDetection(raw []byte, width, height int) (*Detection, er
 		}
 		regions = append(regions, Region{conf, geometryToBox(r.Geometry, width, height), lines})
 	}
-	return &Detection{regions}, nil
+
+	algoID := strings.ToLower(result.Service) + ":" + result.Version
+	millis := uint32(result.Duration)
+	return &Detection{algoID, result.Date, millis, regions}, nil
 }

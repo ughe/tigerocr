@@ -23,7 +23,8 @@ type Result struct {
 
 type Client interface {
 	Run(image []byte) (*Result, error)
-	RawToDetection(raw []byte, width, height int) (*Detection, error)
+	// Converts lossless Result format to unified Detection format
+	ResultToDetection(result *Result, width, height int) (*Detection, error)
 }
 
 func fmtTime(t time.Time) string {

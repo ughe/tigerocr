@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"strings"
 	"time"
 
 	vision "cloud.google.com/go/vision/apiv1"
@@ -93,9 +94,9 @@ func polyToBox(poly *pb.BoundingPoly) (string, error) {
 	return encodeBounds(int(minx), int(miny), int(maxx-minx), int(maxy-miny)), nil
 }
 
-func (_ GCPClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
+func (_ GCPClient) ResultToDetection(result *Result, _, _ int) (*Detection, error) {
 	var response pb.TextAnnotation
-	err := json.Unmarshal(raw, &response)
+	err := json.Unmarshal(result.Raw, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,12 @@ func (_ GCPClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
 					if err != nil {
 						return nil, err
 					}
-					words = append(words, Word{w.Confidence, bounds, w.String()})
+					symbols := make([]string, len(w.Symbols))
+					for _, s := range w.Symbols {
+						symbols = append(symbols, s.Text)
+					}
+					word := strings.Join(symbols, "")
+					words = append(words, Word{w.Confidence, bounds, word})
 				}
 				bounds, err := polyToBox(l.BoundingBox)
 				if err != nil {
@@ -126,5 +132,7 @@ func (_ GCPClient) RawToDetection(raw []byte, _, _ int) (*Detection, error) {
 			regions = append(regions, Region{r.Confidence, bounds, lines})
 		}
 	}
-	return &Detection{regions}, nil
+	algoID := strings.ToLower(result.Service) + ":" + result.Version
+	millis := uint32(result.Duration)
+	return &Detection{algoID, result.Date, millis, regions}, nil
 }
