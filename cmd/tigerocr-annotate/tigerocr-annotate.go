@@ -8,13 +8,13 @@ import (
 	"image"
 	"image/color"
 	_ "image/jpeg"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/ughe/tigerocr/ocr"
-	"github.com/ughe/tigerocr/util"
 )
 
 var (
@@ -23,23 +23,35 @@ var (
 	orange = color.RGBA{255, 165, 0, 255}
 )
 
-func annotate(result *ocr.Result, src []byte, c ocr.Client, col color.Color, b, l, w bool, dstName string) {
+func abs(n int) int {
+	if n >= 0 {
+		return n
+	} else {
+		return -n
+	}
+}
+
+func annotate(result *ocr.Result, src []byte, c ocr.Client, col color.Color, b, l, w bool, dstFilename string) error {
 	m, _, err := image.Decode(bytes.NewReader(src))
 	if err != nil {
-		log.Fatalf("annotate:image.Decode: %v", err)
+		return err
 	}
 	mb := m.Bounds()
-	width, height := util.Abs(mb.Max.X-mb.Min.X), util.Abs(mb.Max.Y-mb.Min.Y)
+	width, height := abs(mb.Max.X-mb.Min.X), abs(mb.Max.Y-mb.Min.Y)
 
 	detection, err := c.ResultToDetection(result, width, height)
 	if err != nil {
-		log.Fatalf("ResultToDetection:%v: %v", result.Service, err)
+		return err
 	}
 	dst, err := ocr.Annotate(src, detection, col, b, l, w)
 	if err != nil {
-		log.Fatalf("Annotate:%v: %v", result.Service, err)
+		return err
 	}
-	util.Write(dst, dstName)
+
+	if err := ioutil.WriteFile(dstFilename, dst, 0600); err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
@@ -67,11 +79,11 @@ func main() {
 	}
 
 	imgName := flag.Arg(0)
-	img, err := util.Read(flag.Arg(0))
+	img, err := ioutil.ReadFile(flag.Arg(0))
 	if err != nil {
 		log.Fatalf("Failed to read image: %v", err)
 	}
-	raw, err := util.Read(flag.Arg(1))
+	raw, err := ioutil.ReadFile(flag.Arg(1))
 	if err != nil {
 		log.Fatalf("Failed to read json: %v", err)
 	}
@@ -98,12 +110,15 @@ func main() {
 
 	switch result.Service {
 	case "AWS":
-		annotate(&result, img, ocr.AWSClient{""}, orange, b, l, w, dstName)
+		err = annotate(&result, img, ocr.AWSClient{""}, orange, b, l, w, dstName)
 	case "Azure":
-		annotate(&result, img, ocr.AzureClient{""}, blue, b, l, w, dstName)
+		err = annotate(&result, img, ocr.AzureClient{""}, blue, b, l, w, dstName)
 	case "GCP":
-		annotate(&result, img, ocr.GCPClient{""}, red, b, l, w, dstName)
+		err = annotate(&result, img, ocr.GCPClient{""}, red, b, l, w, dstName)
 	default:
 		log.Fatalf("Service %v is not {AWS, Azure, GCP}", result.Service)
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 }
