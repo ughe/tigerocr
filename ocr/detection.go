@@ -8,13 +8,13 @@ import (
 )
 
 type Detection struct {
-	AlgoID  string   `json:"algo"`
-	Date    string   `json:"date"`
-	Millis  uint32   `json:"millis"`
-	Regions []Region `json:"regions"`
+	AlgoID string  `json:"algo"`
+	Date   string  `json:"date"`
+	Millis uint32  `json:"millis"`
+	Blocks []Block `json:"blocks"`
 }
 
-type Region struct {
+type Block struct {
 	Confidence float32 `json:"conf"`
 	Bounds     string  `json:"xywh"`
 	Lines      []Line  `json:"lines"`
@@ -37,6 +37,24 @@ type Bounds struct {
 	Y int
 	W int
 	H int
+}
+
+func isAlphaNumeric(r byte) bool {
+	return (r >= '0' && r <= '9') ||
+		(r >= 'A' && r <= 'Z') ||
+		(r >= 'a' && r <= 'z')
+}
+
+func sanitizeString(str string) string {
+	san := make([]byte, 0, len(str))
+	for i, _ := range str {
+		if isAlphaNumeric(str[i]) {
+			san = append(san, str[i])
+		} else {
+			san = append(san, '_')
+		}
+	}
+	return strings.ToLower(string(san))
 }
 
 func encodeBounds(x, y, w, h int) string {

@@ -101,7 +101,7 @@ func (_ GCPClient) ResultToDetection(result *Result, _, _ int) (*Detection, erro
 		return nil, err
 	}
 
-	regions := make([]Region, 0, 3)
+	blocks := make([]Block, 0, 3)
 	for _, p := range response.Pages {
 		for _, r := range p.Blocks {
 			lines := make([]Line, 0, len(r.Paragraphs))
@@ -129,10 +129,10 @@ func (_ GCPClient) ResultToDetection(result *Result, _, _ int) (*Detection, erro
 			if err != nil {
 				return nil, err
 			}
-			regions = append(regions, Region{r.Confidence, bounds, lines})
+			blocks = append(blocks, Block{r.Confidence, bounds, lines})
 		}
 	}
-	algoID := strings.ToLower(result.Service) + ":" + result.Version
+	algoID := sanitizeString(result.Service[:3] + "-" + result.Version)
 	millis := uint32(result.Duration)
-	return &Detection{algoID, result.Date, millis, regions}, nil
+	return &Detection{algoID, result.Date, millis, blocks}, nil
 }

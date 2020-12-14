@@ -2,7 +2,6 @@ package ocr
 
 import (
 	"bytes"
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -38,16 +37,15 @@ func Annotate(src []byte, response *Detection, c color.Color, ab, al, aw bool) (
 	}
 	img := image.NewRGBA(m.Bounds())
 	draw.Draw(img, img.Bounds(), m, image.ZP, draw.Src)
-	for _, region := range response.Regions {
-		x, y, w, h, err := decodeBounds(region.Bounds)
+	for _, block := range response.Blocks {
+		x, y, w, h, err := decodeBounds(block.Bounds)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("[INFO] Region: (%d, %d) (%d, %d)\n", x, y, w, h)
 		if ab {
 			bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
 		}
-		for _, line := range region.Lines {
+		for _, line := range block.Lines {
 			x, y, w, h, err = decodeBounds(line.Bounds)
 			if err != nil {
 				return nil, err

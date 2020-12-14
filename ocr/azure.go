@@ -139,7 +139,7 @@ func (_ AzureClient) ResultToDetection(result *Result, _, _ int) (*Detection, er
 		return nil, err
 	}
 
-	regions := make([]Region, 0, len(response.Regions))
+	blocks := make([]Block, 0, len(response.Regions))
 	for _, r := range response.Regions {
 		lines := make([]Line, 0, len(r.Lines))
 		for _, l := range r.Lines {
@@ -149,9 +149,9 @@ func (_ AzureClient) ResultToDetection(result *Result, _, _ int) (*Detection, er
 			}
 			lines = append(lines, Line{1.0, l.Bounds, words})
 		}
-		regions = append(regions, Region{1.0, r.Bounds, lines})
+		blocks = append(blocks, Block{1.0, r.Bounds, lines})
 	}
-	algoID := strings.ToLower(result.Service) + ":" + result.Version
+	algoID := sanitizeString(result.Service[:3] + "-" + result.Version)
 	millis := uint32(result.Duration)
-	return &Detection{algoID, result.Date, millis, regions}, nil
+	return &Detection{algoID, result.Date, millis, blocks}, nil
 }

@@ -113,22 +113,22 @@ func (_ AWSClient) ResultToDetection(result *Result, width, height int) (*Detect
 	}
 
 	mpages := make([]textract.Block, 0)
-	blocks := make(map[string]*textract.Block)
+	blks := make(map[string]*textract.Block)
 
 	for _, b := range response.Blocks {
 		switch *b.BlockType {
 		case "PAGE":
 			mpages = append(mpages, *b)
 		case "LINE":
-			blocks[*b.Id] = b
+			blks[*b.Id] = b
 		case "WORD":
-			blocks[*b.Id] = b
+			blks[*b.Id] = b
 		default:
 			return nil, fmt.Errorf("Invalid BlockType: %v", *b.BlockType)
 		}
 	}
 
-	regions := make([]Region, 0, len(mpages))
+	blocks := make([]Block, 0, len(mpages))
 	for _, r := range mpages {
 		ids, err := relsToIds(r.Relationships)
 		if err != nil {
@@ -139,7 +139,7 @@ func (_ AWSClient) ResultToDetection(result *Result, width, height int) (*Detect
 		}
 		lines := make([]Line, 0, len(ids))
 		for _, id := range ids {
-			l, ok := blocks[*id]
+			l, ok := blks[*id]
 			if !ok {
 				return nil, fmt.Errorf("Line %v not found", *id)
 			}
@@ -152,7 +152,7 @@ func (_ AWSClient) ResultToDetection(result *Result, width, height int) (*Detect
 			}
 			words := make([]Word, 0, len(ids))
 			for _, id := range ids {
-				w, ok := blocks[*id]
+				w, ok := blks[*id]
 				if !ok {
 					return nil, fmt.Errorf("Word %v not found", *id)
 				}
@@ -170,10 +170,10 @@ func (_ AWSClient) ResultToDetection(result *Result, width, height int) (*Detect
 			}
 			conf /= float32(len(lines))
 		}
-		regions = append(regions, Region{conf, geometryToBox(r.Geometry, width, height), lines})
+		blocks = append(blocks, Block{conf, geometryToBox(r.Geometry, width, height), lines})
 	}
 
-	algoID := strings.ToLower(result.Service) + ":" + result.Version
+	algoID := sanitizeString(result.Service[:3] + "-" + result.Version)
 	millis := uint32(result.Duration)
-	return &Detection{algoID, result.Date, millis, regions}, nil
+	return &Detection{algoID, result.Date, millis, blocks}, nil
 }
