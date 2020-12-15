@@ -86,7 +86,7 @@ func (c AWSClient) Run(image []byte) (*Result, error) {
 func geometryToBox(g *textract.Geometry, wi, hi int) string {
 	b := g.BoundingBox
 	w, h := float64(wi), float64(hi)
-	return encodeBounds(int(*b.Left*w+.5), int(*b.Top*h+.5),
+	return encodeRawBounds(int(*b.Left*w+.5), int(*b.Top*h+.5),
 		int(*b.Width*w+.5), int(*b.Height*h+.5))
 }
 

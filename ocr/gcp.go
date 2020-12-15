@@ -91,7 +91,7 @@ func polyToBox(poly *pb.BoundingPoly) (string, error) {
 			maxy = v.Y
 		}
 	}
-	return encodeBounds(int(minx), int(miny), int(maxx-minx), int(maxy-miny)), nil
+	return encodeRawBounds(int(minx), int(miny), int(maxx-minx), int(maxy-miny)), nil
 }
 
 func (_ GCPClient) ResultToDetection(result *Result, _, _ int) (*Detection, error) {

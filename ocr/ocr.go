@@ -22,3 +22,9 @@ type Client interface {
 func fmtTime(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05 MST")
 }
+
+// Returns bounding boxes that group words into lines
+// func WordsToLines(words []Word) {
+// }
+// TODO sort words by center point
+// Then, find nearest match
