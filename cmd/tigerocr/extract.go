@@ -66,7 +66,7 @@ func extractCommand(filename string, stat, algoid, speed, date, text bool) error
 	} else if date {
 		fmt.Printf("%s\n", detection.Date)
 	} else if text {
-		fmt.Printf("%s\n", detection.text())
+		fmt.Printf("%s\n", detection.Plaintext())
 	} else {
 		return fmt.Errorf("Error: no flags specified")
 	}

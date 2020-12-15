@@ -30,7 +30,7 @@ func annotate(img []byte, detection *ocr.Detection, b, l, w bool, dstFilename st
 		col = color.Black
 	}
 
-	dstImg, err := ocr.Annotate(img, detection, col, b, l, w)
+	dstImg, err := detection.Annotate(img, col, b, l, w)
 	if err != nil {
 		return err
 	}

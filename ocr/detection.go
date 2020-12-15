@@ -1,10 +1,17 @@
 package ocr
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/jpeg"
 	"strconv"
 	"strings"
+
+	"github.com/ughe/tigerocr/bresenham"
 )
 
 type Detection struct {
@@ -66,6 +73,45 @@ func (d *Detection) CountBLW() (int, int, int) {
 		}
 	}
 	return nb, nl, nw
+}
+
+func (d *Detection) Annotate(src []byte, c color.Color, ab, al, aw bool) ([]byte, error) {
+	m, _, err := image.Decode(bytes.NewReader(src))
+	if err != nil {
+		return nil, err
+	}
+	img := image.NewRGBA(m.Bounds())
+	draw.Draw(img, img.Bounds(), m, image.ZP, draw.Src)
+	for _, block := range d.Blocks {
+		x, y, w, h, err := decodeBounds(block.Bounds)
+		if err != nil {
+			return nil, err
+		}
+		if ab {
+			bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
+		}
+		for _, line := range block.Lines {
+			x, y, w, h, err = decodeBounds(line.Bounds)
+			if err != nil {
+				return nil, err
+			}
+			if al {
+				bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
+			}
+			for _, word := range line.Words {
+				x, y, w, h, err = decodeBounds(word.Bounds)
+				if err != nil {
+					return nil, err
+				}
+				if aw {
+					bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
+				}
+			}
+		}
+	}
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, img, nil)
+	return buf.Bytes(), nil
 }
 
 func isAlphaNumeric(r byte) bool {
