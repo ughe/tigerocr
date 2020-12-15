@@ -48,7 +48,7 @@ func isAlphaNumeric(r byte) bool {
 func sanitizeString(str string) string {
 	san := make([]byte, 0, len(str))
 	for i, _ := range str {
-		if isAlphaNumeric(str[i]) {
+		if isAlphaNumeric(str[i]) || str[i] == '-' {
 			san = append(san, str[i])
 		} else {
 			san = append(san, '_')

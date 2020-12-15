@@ -170,24 +170,7 @@ func annotateCommand(b, l, w bool, imageFilename, coordFilename string) error {
 		if err := json.Unmarshal(raw, &result); err != nil {
 			return err
 		}
-		var c ocr.Client
-		switch result.Service {
-		case "AWS":
-			c = ocr.AWSClient{""}
-		case "Azure":
-			c = ocr.AzureClient{""}
-		case "GCP":
-			c = ocr.GCPClient{""}
-		default:
-			return fmt.Errorf("Datafile %v has invalid Service tag. Service %v is not {AWS, Azure, GCP}", coordFilename, result.Service)
-		}
-		img, _, err := image.Decode(bytes.NewReader(buf))
-		if err != nil {
-			return err
-		}
-		mb := img.Bounds()
-		width, height := abs(mb.Max.X-mb.Min.X), abs(mb.Max.Y-mb.Min.Y)
-		detection, err = c.ResultToDetection(&result, width, height)
+		detection, err = convertToBLW(buf, &result)
 		if err != nil {
 			return err
 		}
@@ -232,6 +215,63 @@ func editdistCommand(srcFilename, dstFilename string, cer bool) error {
 	return nil
 }
 
+func convertToBLW(img []byte, result *ocr.Result) (*ocr.Detection, error) {
+	var c ocr.Client
+	switch result.Service {
+	case "AWS":
+		c = ocr.AWSClient{""}
+	case "Azure":
+		c = ocr.AzureClient{""}
+	case "GCP":
+		c = ocr.GCPClient{""}
+	default:
+		return nil, fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
+	}
+	m, _, err := image.Decode(bytes.NewReader(img))
+	if err != nil {
+		return nil, err
+	}
+	mb := m.Bounds()
+	width, height := abs(mb.Max.X-mb.Min.X), abs(mb.Max.Y-mb.Min.Y)
+	return c.ResultToDetection(result, width, height)
+}
+
+func convertCommand(imgFilename, jsnFilename string) error {
+	img, err := ioutil.ReadFile(imgFilename)
+	if err != nil {
+		return err
+	}
+	raw, err := ioutil.ReadFile(jsnFilename)
+	if err != nil {
+		return err
+	}
+
+	var result ocr.Result
+	err = json.Unmarshal(raw, &result)
+	if err != nil {
+		return err
+	}
+
+	dstFilename := strings.TrimSuffix(filepath.Base(imgFilename), filepath.Ext(imgFilename)) + "." + strings.ToLower(result.Service)[:3] + ".blw"
+
+	detection, err := convertToBLW(img, &result)
+	if err != nil {
+		return err
+	}
+
+	encoded, err := json.Marshal(detection)
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(dstFilename, encoded, 0600); err != nil {
+		return err
+	} else {
+		fmt.Printf("[INFO] Converted json to blw: %v\n", dstFilename)
+		return nil
+	}
+}
+
 func main() {
 	// run command
 	runSet := flag.NewFlagSet("run", flag.ExitOnError)
@@ -273,12 +313,20 @@ func main() {
 		editdistSet.PrintDefaults()
 	}
 
+	// convert command
+	convertSet := flag.NewFlagSet("convert", flag.ExitOnError)
+	convertSet.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s %s img.jpg ocr.json\n\n", os.Args[0], os.Args[1])
+		// convertSet.PrintDefaults() // No flags used
+	}
+
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s <command> [arguments]\n\nThe commands are:\n\n" +
-			"\t%v\n\t%v\n\t%v\n\n", os.Args[0],
+		fmt.Fprintf(os.Stderr, "usage: %s <command> [arguments]\n\nThe commands are:\n\n"+
+			"\t%v\n\t%v\n\t%v\n\t%v\n"+"\n", os.Args[0],
 			"run     \t execute ocr on selected providers",
 			"annotate\t draw bounding boxes of words on the original image",
 			"editdist\t calculate levenshtein distance of two plaintext files",
+			"convert \t convert json ocr responses to unified blw files",
 		)
 		flag.PrintDefaults()
 	}
@@ -319,6 +367,15 @@ func main() {
 		srcFilename := editdistSet.Arg(0)
 		dstFilename := editdistSet.Arg(1)
 		err = editdistCommand(srcFilename, dstFilename, *cero)
+	case "convert":
+		convertSet.Parse(os.Args[2:])
+		if convertSet.NArg() != 2 {
+			convertSet.Usage()
+			os.Exit(1)
+		}
+		imgFilename := convertSet.Arg(0)
+		jsnFilename := convertSet.Arg(1)
+		err = convertCommand(imgFilename, jsnFilename)
 	default:
 		flag.Usage()
 		os.Exit(1)
