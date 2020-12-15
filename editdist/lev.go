@@ -33,3 +33,14 @@ func levenshtein(a []byte, b []byte) [][]int {
 func Levenshtein(a []byte, b []byte) int {
 	return levenshtein(a, b)[len(a)][len(b)]
 }
+
+// Character Error Rate
+func CER(levenshteinDist int, blen int) float64 {
+	if levenshteinDist == 0 {
+		return 0.0 // Perfect match
+	} else if blen == 0 {
+		return 1.0 // 100% error if should be empty and not
+	} else {
+		return float64(levenshteinDist) / float64(blen)
+	}
+}

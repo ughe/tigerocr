@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ughe/tigerocr/editdist"
 	"github.com/ughe/tigerocr/ocr"
 )
 
@@ -213,6 +214,24 @@ func annotateCommand(b, l, w bool, imageFilename, coordFilename string) error {
 	return annotate(buf, detection, b, l, w, dstFilename)
 }
 
+func editdistCommand(srcFilename, dstFilename string, cer bool) error {
+	bufa, err := ioutil.ReadFile(srcFilename)
+	if err != nil {
+		return err
+	}
+	bufb, err := ioutil.ReadFile(dstFilename)
+	if err != nil {
+		return err
+	}
+	dist := editdist.Levenshtein(bufa, bufb)
+	if cer {
+		fmt.Printf("%.5f\n", editdist.CER(dist, len(bufb)))
+	} else {
+		fmt.Printf("%d\n", dist)
+	}
+	return nil
+}
+
 func main() {
 	// run command
 	runSet := flag.NewFlagSet("run", flag.ExitOnError)
@@ -246,11 +265,20 @@ func main() {
 		annotateSet.PrintDefaults()
 	}
 
+	// editdist command
+	editdistSet := flag.NewFlagSet("editdist", flag.ExitOnError)
+	cero := editdistSet.Bool("c", false, "Output character error rate instead of levenshtein dist")
+	editdistSet.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s %s [-c] test.txt truth.txt\n\n", os.Args[0], os.Args[1])
+		editdistSet.PrintDefaults()
+	}
+
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s <command> [arguments]\n\nThe commands are:\n\n\t%v\n\t%v\n\n",
-			os.Args[0],
+		fmt.Fprintf(os.Stderr, "usage: %s <command> [arguments]\n\nThe commands are:\n\n" +
+			"\t%v\n\t%v\n\t%v\n\n", os.Args[0],
 			"run     \t execute ocr on selected providers",
 			"annotate\t draw bounding boxes of words on the original image",
+			"editdist\t calculate levenshtein distance of two plaintext files",
 		)
 		flag.PrintDefaults()
 	}
@@ -272,24 +300,30 @@ func main() {
 			runSet.Usage()
 			os.Exit(1)
 		}
-		if err := runCommand(*keys, *awso, *azuo, *gcpo, runSet.Args()); err != nil {
-			log.Fatal(err)
-		}
+		err = runCommand(*keys, *awso, *azuo, *gcpo, runSet.Args())
 	case "annotate":
 		annotateSet.Parse(os.Args[2:])
 		if annotateSet.NArg() != 2 {
-			// log.Fatalf("usage: tigerocr-annotate image.jpg result.json")
 			annotateSet.Usage()
 			os.Exit(1)
 		}
 		imageFilename := annotateSet.Arg(0)
 		coordFilename := annotateSet.Arg(1)
-		if err := annotateCommand(*bo, *lo, *wo, imageFilename, coordFilename); err != nil {
-			log.Fatal(err)
+		err = annotateCommand(*bo, *lo, *wo, imageFilename, coordFilename)
+	case "editdist":
+		editdistSet.Parse(os.Args[2:])
+		if editdistSet.NArg() != 2 {
+			editdistSet.Usage()
+			os.Exit(1)
 		}
+		srcFilename := editdistSet.Arg(0)
+		dstFilename := editdistSet.Arg(1)
+		err = editdistCommand(srcFilename, dstFilename, *cero)
 	default:
 		flag.Usage()
 		os.Exit(1)
 	}
-
+	if err != nil {
+		log.Fatal(err)
+	}
 }
