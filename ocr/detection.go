@@ -39,6 +39,35 @@ type Bounds struct {
 	H int
 }
 
+func (d *Detection) Plaintext() string {
+	var blocks []string
+	for _, b := range d.Blocks {
+		var lines []string
+		for _, l := range b.Lines {
+			var words []string
+			for _, w := range l.Words {
+				words = append(words, w.Text)
+			}
+			lines = append(lines, strings.Join(words[:], " "))
+		}
+		blocks = append(blocks, strings.Join(lines[:], "\n"))
+	}
+	fullText := strings.Join(blocks[:], "\n")
+	return fullText
+}
+
+func (d *Detection) CountBLW() (int, int, int) {
+	nb, nl, nw := 0, 0, 0
+	for _, b := range d.Blocks {
+		nb++
+		for _, l := range b.Lines {
+			nl++
+			nw += len(l.Words)
+		}
+	}
+	return nb, nl, nw
+}
+
 func isAlphaNumeric(r byte) bool {
 	return (r >= '0' && r <= '9') ||
 		(r >= 'A' && r <= 'Z') ||
