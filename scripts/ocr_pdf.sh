@@ -25,7 +25,7 @@ echo -n " OCR | "
 JSON=${NAME}_ocr${DPI}
 mkdir $JSON && cd $JSON
 START=`date +'%s'`
-for f in ../$IMAGES/*; do tigerocr -aws -azure -gcp $f >>stdout.txt 2>> stderr.txt; done
+for f in ../$IMAGES/*; do tigerocr run -aws -azure -gcp $f >>stdout.txt 2>> stderr.txt; done
 STOP=`date +'%s'`
 echo "$(( STOP - START ))"
 cd ..

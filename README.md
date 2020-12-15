@@ -16,7 +16,21 @@ Follow the documentation below to create keys for `AWS`, `Azure`, and `GCP`
 
 ```
 $ tigerocr --help
-Usage of tigerocr:
+usage: tigerocr <command> [arguments]
+
+The commands are:
+
+	run     	 execute ocr on selected providers
+	annotate	 draw bounding boxes of words on the original image
+	editdist	 calculate levenshtein distance of two plaintext files
+	convert 	 convert json ocr responses to unified blw files
+	extract 	 extract metadata from a blw or json datafile
+```
+
+```
+$ tigerocr run --help
+usage: tigerocr run [-keys=~/keydir/] [-aws] [-azure] [-gcp] image.jpg
+
   -aws
     	Run AWS Textract OCR. Key files: credentials config
     	More info: https://docs.aws.amazon.com/textract/latest/dg/setup-awscli-sdk.html
@@ -28,7 +42,7 @@ Usage of tigerocr:
     	Run GCP Vision OCR. Key file: gcp.json
     	More info: https://cloud.google.com/vision/docs/before-you-begin
   -keys string
-    	Path to credentials directory (default "/home/user/.aws")
+    	Path to credentials directory (default "~/.aws")
 ```
 
 ## OCR PDF

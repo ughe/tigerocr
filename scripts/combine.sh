@@ -17,15 +17,15 @@ rm -f .aws.tmp .azu.tmp .gcp.tmp .awsazu.tmp
 for p in `cat ocr.txt`; do
     rm -f .aws.tmp .azu.tmp .gcp.tmp
     unset AWS_MILLIS AZU_MILLIS GCP_MILLIS AWS_AZU_LEV AZU_GCP_LEV GCP_AWS_LEV
-    extractor -text $1/${p}.jpg.aws.json > .aws.tmp
-    extractor -text $1/${p}.jpg.azure.json > .azu.tmp
-    extractor -text $1/${p}.jpg.gcp.json > .gcp.tmp
-    AWS_MILLIS=`extractor -milliseconds $1/${p}.jpg.aws.json`
-    AZU_MILLIS=`extractor -milliseconds $1/${p}.jpg.azure.json`
-    GCP_MILLIS=`extractor -milliseconds $1/${p}.jpg.gcp.json`
-    AWS_AZU_LEV=`editdist .aws.tmp .azu.tmp`
-    AZU_GCP_LEV=`editdist .azu.tmp .gcp.tmp`
-    GCP_AWS_LEV=`editdist .gcp.tmp .aws.tmp`
+    tigerocr extract -text $1/${p}.jpg.aws.json > .aws.tmp
+    tigerocr extract -text $1/${p}.jpg.azure.json > .azu.tmp
+    tigerocr extract -text $1/${p}.jpg.gcp.json > .gcp.tmp
+    AWS_MILLIS=`tigerocr extract -speed $1/${p}.jpg.aws.json`
+    AZU_MILLIS=`tigerocr extract -speed $1/${p}.jpg.azure.json`
+    GCP_MILLIS=`tigerocr extract -speed $1/${p}.jpg.gcp.json`
+    AWS_AZU_LEV=`tigerocr editdist .aws.tmp .azu.tmp`
+    AZU_GCP_LEV=`tigerocr editdist .azu.tmp .gcp.tmp`
+    GCP_AWS_LEV=`tigerocr editdist .gcp.tmp .aws.tmp`
     echo "$p,$AWS_AZU_LEV,$AWS_MILLIS,$AZU_GCP_LEV,$AZU_MILLIS,$GCP_AWS_LEV,$GCP_MILLIS" >> combined.csv
 done
 rm -f .aws.tmp .azu.tmp .gcp.tmp

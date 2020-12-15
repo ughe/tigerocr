@@ -9,7 +9,7 @@ import (
 	"github.com/ughe/tigerocr/ocr"
 )
 
-func extractCommand(filename string, stat, algoid, speed, date, plaintext bool) error {
+func extractCommand(filename string, stat, algoid, speed, date, text bool) error {
 	var detection *ocr.Detection
 	raw, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -65,8 +65,8 @@ func extractCommand(filename string, stat, algoid, speed, date, plaintext bool) 
 		fmt.Printf("%d\n", detection.Millis)
 	} else if date {
 		fmt.Printf("%s\n", detection.Date)
-	} else if plaintext {
-		fmt.Printf("%s\n", detection.Plaintext())
+	} else if text {
+		fmt.Printf("%s\n", detection.text())
 	} else {
 		return fmt.Errorf("Error: no flags specified")
 	}

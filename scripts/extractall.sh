@@ -7,7 +7,7 @@ fi
 
 mkdir -p $2
 for p in `cat ocr.txt`; do
-    extractor -text $1/${p}.jpg.aws.json > $2/${p}.aws.txt
-    extractor -text $1/${p}.jpg.azure.json > $2/${p}.azu.txt
-    extractor -text $1/${p}.jpg.gcp.json > $2/${p}.gcp.txt
+    tigerocr extract -text $1/${p}.jpg.aws.json > $2/${p}.aws.txt
+    tigerocr extract -text $1/${p}.jpg.azure.json > $2/${p}.azu.txt
+    tigerocr extract -text $1/${p}.jpg.gcp.json > $2/${p}.gcp.txt
 done

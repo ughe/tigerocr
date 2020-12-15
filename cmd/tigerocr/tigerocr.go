@@ -96,9 +96,9 @@ func main() {
 	algoido := extractSet.Bool("algoid", false, "Algorithm ID is composed of the service name and version")
 	speedo := extractSet.Bool("speed", false, "Speed is the duration in milliseconds to run OCR")
 	dateo := extractSet.Bool("date", false, "Date the OCR was run")
-	plaintexto := extractSet.Bool("plaintext", false, "OCR transcription in plaintext")
+	texto := extractSet.Bool("text", false, "OCR transcription in plaintext")
 	extractSet.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s %s [-stat] [-algoid] [-speed] [-date] [-plaintext] ocr.blw\n\n", os.Args[0], os.Args[1])
+		fmt.Fprintf(os.Stderr, "usage: %s %s [-stat] [-algoid] [-speed] [-date] [-text] ocr.blw\n\n", os.Args[0], os.Args[1])
 		extractSet.PrintDefaults()
 	}
 
@@ -107,7 +107,7 @@ func main() {
 			"\t%v\n\t%v\n\t%v\n\t%v\n\t%v\n"+"\n", os.Args[0],
 			"run     \t execute ocr on selected providers",
 			"annotate\t draw bounding boxes of words on the original image",
-			"editdist\t calculate levenshtein distance of two plaintext files",
+			"editdist\t calculate levenshtein distance of two text files",
 			"convert \t convert json ocr responses to unified blw files",
 			"extract \t extract metadata from a blw or json datafile",
 		)
@@ -165,19 +165,19 @@ func main() {
 			extractSet.Usage()
 			os.Exit(1)
 		}
-		if !(*stato || *algoido || *speedo || *dateo || *plaintexto) {
+		if !(*stato || *algoido || *speedo || *dateo || *texto) {
 			fmt.Fprintf(os.Stderr, "Error: no flags. Please specify one flag.\n\n")
 			extractSet.Usage()
 			os.Exit(1)
 		}
 		// Check for more than one flag specified
-		if (*stato && *algoido) || (*stato && *speedo) || (*stato && *dateo) || (*stato && *plaintexto) || (*algoido && *speedo) || (*algoido && *dateo) || (*algoido && *plaintexto) || (*speedo && *dateo) || (*speedo && *plaintexto) || (*dateo && *plaintexto) {
+		if (*stato && *algoido) || (*stato && *speedo) || (*stato && *dateo) || (*stato && *texto) || (*algoido && *speedo) || (*algoido && *dateo) || (*algoido && *texto) || (*speedo && *dateo) || (*speedo && *texto) || (*dateo && *texto) {
 			fmt.Fprintf(os.Stderr, "Error: multiple flags. Please specify one flag.\n\n")
 			extractSet.Usage()
 			os.Exit(1)
 		}
 		dataFilename := extractSet.Arg(0)
-		err = extractCommand(dataFilename, *stato, *algoido, *speedo, *dateo, *plaintexto)
+		err = extractCommand(dataFilename, *stato, *algoido, *speedo, *dateo, *texto)
 	default:
 		flag.Usage()
 		os.Exit(1)
