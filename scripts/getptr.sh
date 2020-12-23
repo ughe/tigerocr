@@ -1,4 +1,5 @@
 #!/bin/bash
+# Get Old Bailey Online image URL given a pointer id
 
 if [ $# -ne 1 ]; then
   echo "usage: ./getptr.sh OA167605170001"
