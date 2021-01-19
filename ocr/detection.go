@@ -9,7 +9,7 @@ import (
 	"image/draw"
 	"image/jpeg"
 	"math"
-	// "math/rand" // TODO remove
+	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -248,9 +248,10 @@ func max(a, b int) int {
 
 func halfway(a, b int) int {
 	x0, x1 := min(a, b), max(a, b)
-	return x1 + (x1-x0)/2
+	return x0 + (x1-x0)/2
 }
 
+// Expects b0 to be above b1
 func lineSeparator(b0, b1 Bounds) (*image.Point, *image.Point, error) {
 	midy := halfway(b0.Y+b0.H, b1.Y)
 
@@ -318,9 +319,8 @@ func (d *Detection) AnnotateBoundaries(src []byte, c color.Color, ab, al, aw boo
 
 	mu := mean(sep)
 	sigma := stddev(sep)
-	fmt.Printf("[INFO] mu: %v\n", mu)
+	fmt.Printf("[INFO] mean:   %v\n", mu)
 	fmt.Printf("[INFO] stddev: %v\n", sigma)
-	fmt.Print("\n")
 
 	m, _, err := image.Decode(bytes.NewReader(src))
 	if err != nil {
@@ -329,34 +329,27 @@ func (d *Detection) AnnotateBoundaries(src []byte, c color.Color, ab, al, aw boo
 	img := image.NewRGBA(m.Bounds())
 	draw.Draw(img, img.Bounds(), m, image.ZP, draw.Src)
 
-	deadbe := color.RGBA{222, 173, 190, 255}
-
 	// Find number of separations greater than one stddev
 	n := 0
 	for i, s := range sep {
-		fmt.Printf("%d,", s)
 		if float64(s) > mu+sigma {
 			n++
 			p0, p1, err := lineSeparator(bwords[i].b, bwords[i+1].b)
 			if err != nil {
 				return nil, err
 			}
-			bresenham.Line(img, *p0, *p1, deadbe, 1)
-			/*
-				//col := color.RGBA{255, uint8(float64(i) * 255.0 / 750), 0, 255}
-				r := uint8(rand.Intn(256))
-				g := uint8(rand.Intn(256))
-				b := uint8(rand.Intn(256))
-				col := color.RGBA{r, g, b, 255}
-				bresenham.Rect(img, image.Point{bwords[i].b.X, bwords[i].b.Y}, bwords[i].b.W, bwords[i].b.H, col, 2)
-				bresenham.Rect(img, image.Point{bwords[i+1].b.X, bwords[i+1].b.Y}, bwords[i+1].b.W, bwords[i+1].b.H, col, 2)
-				fmt.Printf("Two Words: '%s' and '%s' at: %d and %d\n", bwords[i].t, bwords[i+1].t, bwords[i].b.Y, bwords[i+1].b.Y)
-			*/
+			r := uint8(rand.Intn(256))
+			g := uint8(rand.Intn(256))
+			b := uint8(rand.Intn(256))
+			col := color.RGBA{r, g, b, 255}
+			bresenham.Rect(img, image.Point{bwords[i].b.X, bwords[i].b.Y}, bwords[i].b.W, bwords[i].b.H, col, 1)
+			bresenham.Rect(img, image.Point{bwords[i+1].b.X, bwords[i+1].b.Y}, bwords[i+1].b.W, bwords[i+1].b.H, col, 1)
+			bresenham.Line(img, *p0, *p1, col, 1)
 
+			fmt.Printf("[INFO] %d `%s` `%s` | %d - %d = %d\n", s, bwords[i].t, bwords[i+1].t, bwords[i+1].b.Y+bwords[i+1].b.H, bwords[i].b.Y+bwords[i].b.H, s)
 		}
 	}
-	fmt.Print("\n")
-	fmt.Printf("[INFO] # separations > stddev: %d\n", n)
+	fmt.Printf("[INFO] Total lines detected: %d\n", n)
 
 	buf := new(bytes.Buffer)
 	err = jpeg.Encode(buf, img, nil)
