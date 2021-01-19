@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"strings"
 
 	"github.com/ughe/tigerocr/ocr"
 )
@@ -75,6 +76,13 @@ func main() {
 		annotateSet.PrintDefaults()
 	}
 
+	// merge command
+	mergeSet := flag.NewFlagSet("merge", flag.ExitOnError)
+	mergeSet.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s %s fst.blw snd.blw ...\n\n", os.Args[0], os.Args[1])
+		mergeSet.PrintDefaults()
+	}
+
 	// editdist command
 	editdistSet := flag.NewFlagSet("editdist", flag.ExitOnError)
 	cero := editdistSet.Bool("c", false, "Output character error rate instead of levenshtein dist")
@@ -104,9 +112,10 @@ func main() {
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s <command> [arguments]\n\nThe commands are:\n\n"+
-			"\t%v\n\t%v\n\t%v\n\t%v\n\t%v\n"+"\n", os.Args[0],
+			strings.Repeat("\t%v\n", 6)+"\n", os.Args[0],
 			"run     \t execute ocr on selected providers",
 			"annotate\t draw bounding boxes of words on the original image",
+			"merge   \t combine multiple blw files for boosted transcription",
 			"editdist\t calculate levenshtein distance of two text files",
 			"convert \t convert json ocr responses to unified blw files",
 			"extract \t extract metadata from a blw or json datafile",
@@ -141,6 +150,13 @@ func main() {
 		imageFilename := annotateSet.Arg(0)
 		coordFilename := annotateSet.Arg(1)
 		err = annotateCommand(*bo, *lo, *wo, imageFilename, coordFilename)
+	case "merge":
+		mergeSet.Parse(os.Args[2:])
+		if mergeSet.NArg() < 2 {
+			mergeSet.Usage()
+			os.Exit(1)
+		}
+		err = mergeCommand(mergeSet.Args())
 	case "editdist":
 		editdistSet.Parse(os.Args[2:])
 		if editdistSet.NArg() != 2 {
