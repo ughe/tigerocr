@@ -294,12 +294,47 @@ func stddev(xs []int) float64 {
 	return math.Sqrt(sigma / float64(len(xs)-1))
 }
 
-// Draws boundaries between lines and columns
-func (d *Detection) AnnotateBoundaries(src []byte, c color.Color, ab, al, aw bool) ([]byte, error) {
-	if ab || al || aw { // TODO: remove
-		fmt.Printf("")
+func Annotate(src []byte, response *Detection, c color.Color, ab, al, aw bool) ([]byte, error) {
+	m, _, err := image.Decode(bytes.NewReader(src))
+	if err != nil {
+		return nil, err
 	}
+	img := image.NewRGBA(m.Bounds())
+	draw.Draw(img, img.Bounds(), m, image.ZP, draw.Src)
+	for _, block := range response.Blocks {
+		x, y, w, h, err := decodeRawBounds(block.Bounds)
+		if err != nil {
+			return nil, err
+		}
+		if ab {
+			bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
+		}
+		for _, line := range block.Lines {
+			x, y, w, h, err = decodeRawBounds(line.Bounds)
+			if err != nil {
+				return nil, err
+			}
+			if al {
+				bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
+			}
+			for _, word := range line.Words {
+				x, y, w, h, err = decodeRawBounds(word.Bounds)
+				if err != nil {
+					return nil, err
+				}
+				if aw {
+					bresenham.Rect(img, image.Point{x, y}, w, h, c, 1)
+				}
+			}
+		}
+	}
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, img, nil)
+	return buf.Bytes(), nil
+}
 
+// Attempts to find line boundaries and draw them
+func (d *Detection) AnnotateLineBoundaries(src []byte, c color.Color) ([]byte, error) {
 	bwords, err := d.Flatten()
 	if err != nil {
 		return nil, err
