@@ -50,7 +50,7 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	const (
 		service     = "Azure"
 		keyName     = "azure.json"
-		uriVersion  = "vision/v2.1/ocr"
+		uriVersion  = "vision/v3.1/ocr"
 		httpTimeout = time.Second * 15
 	)
 
