@@ -77,44 +77,51 @@ func (n *Node) inRegion(b [2][K]T) bool {
 }
 
 // Returns true if the bounds overlap in every dimension
-func (b0 [2][K]T) intersects(b1 [2][K]T) bool {
+func intersects(b0, b1 [2][K]T, b1v [2][K]bool) bool {
 	for d := 0; d < K; d++ {
-		if b1[0] > b0[1] || b1[1] < b0[0] {
+		if (b1v[0][d] && b1[0][d] > b0[1][d]) ||
+			(b1v[1][d] && b1[1][d] < b0[0][d]) {
 			return false
 		}
 	}
 	return true
 }
 
-func (n *Node) regionSearch(target, b [2][K]T, r *[]Node, d int) {
+func (n *Node) regionSearch(target, b [2][K]T, bv [2][K]bool, r *[]*Node, d int) {
 	// R1
 	if n.inRegion(target) {
 		*r = append(*r, n)
 	}
 	// R2
-	bl = [2][K]T{b[0], b[1]}
-	bh = [2][K]T{b[0], b[1]}
+	bl := [2][K]T{b[0], b[1]}
+	bh := [2][K]T{b[0], b[1]}
 	bl[1][d] = n.val[d]
 	bh[0][d] = n.val[d]
+	// Set valid bit for (possibly) new dimensions in bl, bh
+	blv := [2][K]bool{bv[0], bv[1]}
+	bhv := [2][K]bool{bv[0], bv[1]}
+	blv[1][d] = true
+	bhv[0][d] = true
 	// R3
-	if n.lo != nil && target.intersects(bl) {
-		n.lo.regionSearch(bl, r, (d+1)%K)
+	if n.lo != nil && intersects(target, bl, blv) {
+		n.lo.regionSearch(target, bl, blv, r, (d+1)%K)
 	}
 	// R4
-	if n.hi != nil && target.intersects(bh) {
-		n.hi.regionSearch(bh, r, (d+1)%K)
+	if n.hi != nil && intersects(target, bh, bhv) {
+		n.hi.regionSearch(target, bh, bhv, r, (d+1)%K)
 	}
 }
 
-func (n *Node) RegionSearch(bounds [2][K]T) *[]Node {
+func (n *Node) RegionSearch(bounds [2][K]T) *[]*Node {
 	if n == nil {
 		return nil
 	}
-	results := make([]Node, 0)
-	regionSearch(bounds, &results, 0)
+	results := make([]*Node, 0)
+	n.regionSearch(bounds, [2][K]T{}, [2][K]bool{}, &results, 0)
 	return &results
 }
 
+/*
 func (n *Node) Delete() *Node {
 	// D1
 	if n.hi == nil && n.lo == nil {
@@ -133,7 +140,7 @@ func (n *Node) Delete() *Node {
 	}
 }
 
-func (n *Node) optimize(int j) *Node {
+func (n *Node) optimize(j int) *Node {
 	if n == nil {
 		return nil
 	}
@@ -144,6 +151,4 @@ func (n *Node) optimize(int j) *Node {
 func (n *Node) Optimize() *Node {
 	return n.optimize(0)
 }
-
-func (n *Node) RegionSearch() {
-}
+*/
