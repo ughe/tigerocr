@@ -29,6 +29,7 @@ func (root *Node) Insert(val [K]T) *Node {
 	if root == nil {
 		return &Node{val, nil, nil}
 	}
+	n := root
 	for d := 0; ; d = (d + 1) % K {
 		// I2
 		match := true
@@ -143,43 +144,108 @@ func (n *Node) distance(val [K]T) T {
 	return acc
 }
 
-// Node n has dim d. Returns node with minimum val in dim j
-func (n *Node) findMin(d, j int) *Node {
-	if d == j {
+// Returns the node with the smallest value at index j. Requires d,
+// which is the current discriminator level for n
+func (n *Node) jmin(j, d int) *Node {
+	if j == d {
+		// Smallest values must be in LO
+		if n.lo == nil {
+			return n
+		}
+		l := n.lo.jmin(j, (d+1)%K)
+		if n.val[j] <= l.val[j] {
+			return n
+		} else {
+			return l
+		}
 	} else {
-		// Search both subtrees
+		if n.lo == nil && n.hi == nil {
+			return n
+		}
+		var l, h *Node
+		if n.lo != nil {
+			l = n.lo.jmin(j, (d+1)%K)
+		}
+		if n.hi != nil {
+			h = n.hi.jmin(j, (d+1)%K)
+		}
+
+		if n.val[j] <= l.val[j] && n.val[j] <= h.val[j] {
+			return n
+		} else if l.val[j] <= n.val[j] && l.val[j] <= h.val[j] {
+			return l
+		} else { // we know: h.val[j] <= n.val[j] && h.val[j] <= l.val[j]
+			return h
+		}
 	}
 }
 
-func (n *Node) Delete() *Node {
+// Returns the node with the largest value at index j. Requires d,
+// which is the current discriminator level for n
+func (n *Node) jmax(j, d int) *Node {
+	if j == d {
+		// Largest values must be in HI
+		if n.hi == nil {
+			return n
+		}
+		h := n.hi.jmax(j, (d+1)%K)
+		if n.val[j] >= h.val[j] {
+			return n
+		} else {
+			return h
+		}
+	} else {
+		if n.lo == nil && n.hi == nil {
+			return n
+		}
+		var l, h *Node
+		if n.lo != nil {
+			l = n.lo.jmax(j, (d+1)%K)
+		}
+		if n.hi != nil {
+			h = n.hi.jmax(j, (d+1)%K)
+		}
+
+		if n.val[j] >= l.val[j] && n.val[j] >= h.val[j] {
+			return n
+		} else if l.val[j] >= n.val[j] && l.val[j] >= h.val[j] {
+			return l
+		} else { // we know: h.val[j] >= n.val[j] && h.val[j] >= l.val[j]
+			return h
+		}
+	}
+}
+
+// Returns a new tree with the old root deleted. Requires j, the root's
+// discriminator, which increments every level of the tree and is mod K
+// Repeated deletes will unbalance tree since hi is removed before lo
+func (P *Node) Delete(j int) *Node {
+	//var parent *Node // TODO
+	var child **Node
+	var Q Node // Q will take P's place as the new root
+
 	// D1
-	if n.hi == nil && n.lo == nil {
+	if P.hi == nil && P.lo == nil {
 		return nil
 	}
-	var child **node
-	if n.hi == nil {
-		// lo
-		// Q <- J-minimum node in p.hi
-		// QFAT <- father of Q
-		// QSON <- f(QFAT) = Q (hi or lo)
-	} else if n.lo == nil {
-		// hi
+	if P.hi != nil {
+		// D3
+		// parent, child = P.hi.jmin(j, j+1)
+		// TODO
 	} else {
-		// randomly chose
-		rand.Intn(2)
+		// D4
+		// parent, child = P.lo.jmax(j, j+1)
+		// TODO
 	}
 
-	q := n
-	for j := 0; n != nil; j = (j + 1) % K {
-		// D2
-		if n.hi == nil {
-			// D4
-		} else {
-			// D3
-		}
-		// D5
-		// D6
-	}
+	// D5
+	Q = **child
+	*child = (*child).Delete((j + 1) % K)
+
+	// D6
+	Q.hi = P.hi
+	Q.lo = P.lo
+	return &Q
 }
 
 /*
