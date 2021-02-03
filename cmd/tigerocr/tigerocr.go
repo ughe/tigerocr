@@ -112,15 +112,31 @@ func main() {
 		extractSet.PrintDefaults()
 	}
 
+	// explore command
+	exploreSet := flag.NewFlagSet("explore", flag.ExitOnError)
+	exploreSet.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s %s file.pdf\n\n", os.Args[0], os.Args[1])
+		// exploreSet.PrintDefaults() // No flags used
+	}
+
+	// serve command
+	serveSet := flag.NewFlagSet("serve", flag.ExitOnError)
+	serveSet.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s %s ./explorer\n\n", os.Args[0], os.Args[1])
+		// serveSet.PrintDefaults() // No flags used
+	}
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s <command> [arguments]\n\nThe commands are:\n\n"+
-			strings.Repeat("\t%v\n", 6)+"\n", os.Args[0],
+			strings.Repeat("\t%v\n", 8)+"\n", os.Args[0],
 			"run     \t execute ocr on selected providers",
 			"annotate\t draw bounding boxes of words on the original image",
 			"merge   \t combine multiple blw files for boosted transcription",
 			"editdist\t calculate levenshtein distance of two text files",
-			"convert \t convert json ocr responses to unified blw files",
+			"convert \t convert json ocr responses to unified blw format",
 			"extract \t extract metadata from a blw or json datafile",
+			"explore \t execute pdf ocr and output results as a web explorer",
+			"serve   \t serve current directory at 0.0.0.0"+port,
 		)
 		flag.PrintDefaults()
 	}
@@ -196,11 +212,30 @@ func main() {
 		}
 		dataFilename := extractSet.Arg(0)
 		err = extractCommand(dataFilename, *stato, *algoido, *speedo, *dateo, *texto)
+	case "explore":
+		exploreSet.Parse(os.Args[2:])
+		if exploreSet.NArg() != 1 { // TODO
+			exploreSet.Usage()
+			os.Exit(1)
+		}
+		pdfName := exploreSet.Arg(0)
+		err = exploreCommand(pdfName)
+	case "serve":
+		serveSet.Parse(os.Args[2:])
+		if serveSet.NArg() > 1 {
+			serveSet.Usage()
+			os.Exit(1)
+		}
+		dirName := "."
+		if serveSet.NArg() == 1 {
+			dirName = serveSet.Arg(0)
+		}
+		err = serve(dirName)
 	default:
 		flag.Usage()
 		os.Exit(1)
 	}
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[ERROR] %s", err)
 	}
 }
