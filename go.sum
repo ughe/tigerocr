@@ -92,6 +92,10 @@ github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
+github.com/ughe/explorer v1.0.0 h1:1TnajOhBkkJzh+BYKH+E8wK3I8sI/CIcsu1xx72C0Uk=
+github.com/ughe/explorer v1.0.0/go.mod h1:gd/bplHc/HLuQsR9h313avrdK4t+YftPq9eTY5+zoug=
+github.com/ughe/explorer v1.0.1 h1:4ilzYsr9xpkEpmLBaj2CYEts9kr+zFUAC5bc07kU/F4=
+github.com/ughe/explorer v1.0.1/go.mod h1:gd/bplHc/HLuQsR9h313avrdK4t+YftPq9eTY5+zoug=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=

@@ -2,12 +2,16 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/ughe/explorer"
 )
 
 const DPI = "300"
@@ -33,9 +37,10 @@ func countPages(gs, pdf string) (int, error) {
 }
 
 // Convert PDF to Image using ImageMagick executable
-func convertPDF(dstDir, pdf string) error {
+func convertPDF(dstDir, pdf string, pageCount int) error {
 	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
-	out := path.Join(dstDir, pdfName + "-%03d." + FMT)
+	nDigits := strconv.Itoa(int(math.Ceil(math.Log10(float64(pageCount)))))
+	out := path.Join(dstDir, pdfName+"-%0"+nDigits+"d."+FMT)
 	_, err := exec.Command("magick", "convert", "-density", DPI,
 		"-alpha", "off", "-quality", QUA, pdf, out).Output()
 	if err != nil {
@@ -80,7 +85,7 @@ func exploreCommand(pdf string) error {
 	fmt.Printf("[INFO] Converting PDF to %d images (%s) ...\n", pc, FMT)
 	imgsDir := path.Join("explorer", "data", "imgs")
 	os.MkdirAll(imgsDir, 0755)
-	err = convertPDF(imgsDir, pdf)
+	err = convertPDF(imgsDir, pdf, pc)
 	if err != nil {
 		return err
 	}
@@ -90,6 +95,26 @@ func exploreCommand(pdf string) error {
 	// TODO: Execute OCR
 	// TODO: Run Levenshtein
 	// TODO: Create config.csv and results.csv
+
+	// Copy explorer static files
+	indexDst := path.Join("explorer", "index.html")
+	if err := ioutil.WriteFile(indexDst, explorer.Index, 0644); err != nil {
+		return err
+	}
+	styleDst := path.Join("explorer", "style.css")
+	if err := ioutil.WriteFile(styleDst, explorer.Style, 0644); err != nil {
+		return err
+	}
+	os.MkdirAll(path.Join("explorer", "js"), 0755) // Create js dir
+	mainDst := path.Join("explorer", "js", "main.js")
+	if err := ioutil.WriteFile(mainDst, explorer.Main, 0644); err != nil {
+		return err
+	}
+	gridDst := path.Join("explorer", "js", "grid.js")
+	if err := ioutil.WriteFile(gridDst, explorer.Grid, 0644); err != nil {
+		return err
+	}
+	fmt.Printf("[DONE] Run: cd explorer && tigerocr serve\n")
 
 	return nil
 }

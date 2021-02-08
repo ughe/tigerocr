@@ -136,7 +136,7 @@ func main() {
 			"convert \t convert json ocr responses to unified blw format",
 			"extract \t extract metadata from a blw or json datafile",
 			"explore \t execute pdf ocr and output results as a web explorer",
-			"serve   \t serve current directory at 0.0.0.0"+port,
+			"serve   \t serve current directory at "+addr,
 		)
 		flag.PrintDefaults()
 	}

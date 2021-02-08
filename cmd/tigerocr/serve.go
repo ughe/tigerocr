@@ -5,9 +5,9 @@ import (
 	"net/http"
 )
 
-const port = ":8080"
+const addr = "127.0.0.1:8080"
 
 func serve(dir string) error {
-	log.Printf("Serving HTTP on http://0.0.0.0%s/ ...\n", port)
-	return http.ListenAndServe(port, http.FileServer(http.Dir(dir)))
+	log.Printf("Serving HTTP on http://%s/.\n", addr)
+	return http.ListenAndServe(addr, http.FileServer(http.Dir(dir)))
 }
