@@ -74,13 +74,13 @@ func extractText(gs, pdf, dstPath string, pageCount int) error {
 }
 
 // Convert PDF to Image using ImageMagick executable. Returns list of pointers
-func convertPDF(dstDir, pdf string, pageCount int) ([]string, error) {
+func convertPDF(magick[]string, dstDir, pdf string, pageCount int) ([]string, error) {
 	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
 	nDigits := strconv.Itoa(int(math.Ceil(math.Log10(float64(pageCount)))))
 	ptr := pdfName + "-%0" + nDigits + "d"
 	out := path.Join(dstDir, ptr+"."+FMT)
-	_, err := exec.Command("magick", "convert", "-density", DPI,
-		"-alpha", "off", "-quality", QUA, pdf, out).Output()
+	magick = append(magick, "-density", DPI, "-alpha", "off", "-quality", QUA, pdf, out)
+	_, err := exec.Command(magick[0], magick[1:]...).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return nil, fmt.Errorf("ImageMagick: %s", string(exitError.Stderr))
@@ -264,8 +264,13 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	}
 
 	// Check for ImageMagick
-	if _, err := exec.LookPath("magick"); err != nil {
-		return fmt.Errorf("Missing magick (imagemagick.org)")
+	var magick []string
+	if _, err := exec.LookPath("magick"); err == nil {
+		magick = []string{"magick", "convert"}
+	} else if _, err := exec.LookPath("convert"); err == nil {
+		magick = []string{"convert"}
+	} else {
+		return fmt.Errorf("Missing magick convert (imagemagick.org)")
 	}
 
 	// Check for GhostScript
@@ -300,7 +305,7 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	start := time.Now()
 	imgsDir := path.Join("explorer", "data", "imgs")
 	os.MkdirAll(imgsDir, DIR_PERM)
-	ptrs, err := convertPDF(imgsDir, pdf, pc)
+	ptrs, err := convertPDF(magick, imgsDir, pdf, pc)
 	if err != nil {
 		return err
 	}
