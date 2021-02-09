@@ -28,11 +28,11 @@ func convertToBLW(img []byte, result *ocr.Result) (*ocr.Detection, error) {
 	var c ocr.Client
 	switch result.Service {
 	case "AWS":
-		c = ocr.AWSClient{""}
+		c = ocr.AWSClient{CredentialsPath: ""}
 	case "Azure":
-		c = ocr.AzureClient{""}
+		c = ocr.AzureClient{CredentialsPath: ""}
 	case "GCP":
-		c = ocr.GCPClient{""}
+		c = ocr.GCPClient{CredentialsPath: ""}
 	default:
 		return nil, fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
 	}
@@ -114,9 +114,13 @@ func main() {
 
 	// explore command
 	exploreSet := flag.NewFlagSet("explore", flag.ExitOnError)
+	xkeys := exploreSet.String("keys", path.Join(usr.HomeDir, ".aws"), "Path to credentials directory")
+	xawso := exploreSet.Bool("aws", false, "Run AWS Textract OCR. "+aws_help)
+	xazuo := exploreSet.Bool("azure", false, "Run Azure CognitiveServices OCR. "+azu_help)
+	xgcpo := exploreSet.Bool("gcp", false, "Run GCP Vision OCR. "+gcp_help)
 	exploreSet.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s %s file.pdf\n\n", os.Args[0], os.Args[1])
-		// exploreSet.PrintDefaults() // No flags used
+		fmt.Fprintf(os.Stderr, "usage: %s %s [-keys=~/keydir/] [-aws] [-azure] [-gcp] file.pdf\n\n", os.Args[0], os.Args[1])
+		exploreSet.PrintDefaults()
 	}
 
 	// serve command
@@ -214,12 +218,17 @@ func main() {
 		err = extractCommand(dataFilename, *stato, *algoido, *speedo, *dateo, *texto)
 	case "explore":
 		exploreSet.Parse(os.Args[2:])
-		if exploreSet.NArg() != 1 { // TODO
+		if exploreSet.NArg() != 1 {
+			exploreSet.Usage()
+			os.Exit(1)
+		}
+		if !*awso && !*azuo && !*gcpo {
+			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.")
 			exploreSet.Usage()
 			os.Exit(1)
 		}
 		pdfName := exploreSet.Arg(0)
-		err = exploreCommand(pdfName)
+		err = exploreCommand(*xkeys, *xawso, *xazuo, *xgcpo, pdfName)
 	case "serve":
 		serveSet.Parse(os.Args[2:])
 		if serveSet.NArg() > 1 {

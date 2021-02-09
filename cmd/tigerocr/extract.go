@@ -30,11 +30,11 @@ func extractCommand(filename string, stat, algoid, speed, date, text bool) error
 		var c ocr.Client
 		switch result.Service {
 		case "AWS":
-			c = ocr.AWSClient{""}
+			c = ocr.AWSClient{CredentialsPath: ""}
 		case "Azure":
-			c = ocr.AzureClient{""}
+			c = ocr.AzureClient{CredentialsPath: ""}
 		case "GCP":
-			c = ocr.GCPClient{""}
+			c = ocr.GCPClient{CredentialsPath: ""}
 		default:
 			return fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
 		}
