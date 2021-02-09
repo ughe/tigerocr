@@ -158,7 +158,7 @@ func main() {
 			os.Exit(1)
 		}
 		if !*awso && !*azuo && !*gcpo {
-			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.")
+			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.\n")
 			runSet.Usage()
 			os.Exit(1)
 		}
@@ -222,8 +222,8 @@ func main() {
 			exploreSet.Usage()
 			os.Exit(1)
 		}
-		if !*awso && !*azuo && !*gcpo {
-			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.")
+		if !*xawso && !*xazuo && !*xgcpo {
+			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.\n")
 			exploreSet.Usage()
 			os.Exit(1)
 		}
