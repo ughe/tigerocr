@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -74,7 +75,7 @@ func extractText(gs, pdf, dstPath string, pageCount int) error {
 }
 
 // Convert PDF to Image using ImageMagick executable. Returns list of pointers
-func convertPDF(magick[]string, dstDir, pdf string, pageCount int) ([]string, error) {
+func convertPDF(magick []string, dstDir, pdf string, pageCount int) ([]string, error) {
 	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
 	nDigits := strconv.Itoa(int(math.Ceil(math.Log10(float64(pageCount)))))
 	ptr := pdfName + "-%0" + nDigits + "d"
@@ -98,96 +99,80 @@ func convertPDF(magick[]string, dstDir, pdf string, pageCount int) ([]string, er
 	return ptrs, nil
 }
 
-// Run OCR in series
-func runSyncOCR(ptrs []string, services map[string]ocr.Client, artDir, imgsDir, ocrDir string) (int, map[string]map[string]string, error) {
-	errs := make(map[string]map[string]string) // service name -> ptr -> err msg
-	logs := make(map[string]map[string]int64)  // service name -> ptr -> time
-	for s, _ := range services {
-		errs[s] = make(map[string]string)
-		logs[s] = make(map[string]int64, len(ptrs))
-	}
+// Executes OCR. Returns map from providers to map from pointer to seconds
+func execOCR(ptrs []string, services map[string]ocr.Client, artDir, imgsDir, ocrDir string) (map[string]map[string]string, error) {
+	os.MkdirAll(artDir, DIR_PERM)
+	os.MkdirAll(ocrDir, DIR_PERM)
 
-	serviceKeys := make([]string, 0, len(services))
-	for k, _ := range services {
-		serviceKeys = append(serviceKeys, k)
+	fout, err := os.OpenFile(path.Join(artDir, "ocr-logs.txt"), os.O_CREATE|os.O_WRONLY, FILE_PERM)
+	if err != nil {
+		return nil, err
 	}
-	sort.Strings(serviceKeys)
-	sort.Strings(ptrs)
+	ferr, err := os.OpenFile(path.Join(artDir, "ocr-errs.txt"), os.O_CREATE|os.O_WRONLY, FILE_PERM)
+	if err != nil {
+		return nil, err
+	}
+	stdout := log.New(fout, "", 0)
+	stderr := log.New(ferr, "", 0)
 
 	// Run each ptr, in order, on each service, in alphabetical order
-	os.MkdirAll(ocrDir, DIR_PERM)
 	for _, ptr := range ptrs {
 		imgPath := path.Join(imgsDir, ptr+"."+FMT)
-		f, err := os.Open(imgPath)
+		err := runOCR(imgPath, ocrDir, stdout, stderr, services)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERR] Failed to open image: %s\n", imgPath)
-			continue
-		}
-		defer f.Close()
-		buf, err := ioutil.ReadAll(bufio.NewReader(f))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERR] Failed to read image: %s\n", imgPath)
-			continue
-		}
-		for _, s := range serviceKeys {
-			jsonPath := path.Join(ocrDir, ptr+"."+s+".json")
-			_, millis, err := runService(buf, services[s], jsonPath)
-			if err != nil {
-				errs[s][ptr] = fmt.Sprintf("%v", err)
-			} else {
-				logs[s][ptr] = millis
-			}
+			return nil, err
 		}
 	}
-	// Finished OCR
 
-	// Dump logs to explorer/data/artifacts/{ocr-errs.txt,ocr-logs.txt}
-	nErrs := 0
-	ocrerrs := make([]string, 0)
-	ocrlogs := make([]string, 0, len(ptrs)*len(services)) // output log
-	results := make(map[string]map[string]string)         // service name -> ptr -> time
+	if err := fout.Close(); err != nil {
+		return nil, err
+	}
+	if err := ferr.Close(); err != nil {
+		return nil, err
+	}
+
+	// Read the logs
+	results := make(map[string]map[string]string)
 	for s, _ := range services {
-		results[s] = make(map[string]string, len(ptrs))
+		results[s] = make(map[string]string)
 	}
 
-	// Need to replicate order in which OCR was run
-	for _, ptr := range ptrs {
-		for _, s := range serviceKeys {
-			if millis, ok := logs[s][ptr]; ok {
-				// Append duration to logs and results
-				const MILLIS_PER_SEC = 1000.0
-				// Format %.02f without any trailing zeros
-				secs := fmt.Sprintf("%.02f", float64(millis)/MILLIS_PER_SEC)
-				if secs[len(secs)-3:] == ".00" {
-					secs = secs[:len(secs)-3]
-				} else if secs[len(secs)-1:] == "0" {
-					secs = secs[:len(secs)-1]
-				}
-				if len(secs) == 0 {
-					secs = "0"
-				}
-				ocrlogs = append(ocrlogs, s+","+ptr+","+secs)
-				results[s][ptr] = secs
-			} else if err, ok := errs[s][ptr]; ok {
-				// Append err to logs
-				nErrs++
-				safeErr := strings.Replace(strings.Replace(err, "\n", "", -1), ",", "", -1)
-				ocrerrs = append(ocrerrs, s+","+ptr+","+safeErr)
-			} else {
-				return 0, nil, fmt.Errorf("Internal Error: a log is missing")
-			}
+	fout, err = os.Open(path.Join(artDir, "ocr-logs.txt"))
+	if err != nil {
+		return nil, err
+	}
+	defer fout.Close()
+	scanner := bufio.NewScanner(fout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Split(line, ":")
+		if len(fields) != 2 {
+			return nil, fmt.Errorf("Expected 1 ':' Found: %s", line)
 		}
+		file, millisStr := fields[0], fields[1]
+		parts := strings.Split(file, ".")
+		if len(parts) != 3 {
+			return nil, fmt.Errorf("Expected 2 '.' Found: %s", file)
+		}
+		ptr, s := parts[0], parts[1]
+		millis, err := strconv.Atoi(millisStr)
+		if err != nil {
+			return nil, err
+		}
+		// Format %.02f without any trailing zeros
+		const MILLIS_PER_SEC = 1000.0
+		secs := fmt.Sprintf("%.02f", float64(millis)/MILLIS_PER_SEC)
+		if secs[len(secs)-3:] == ".00" {
+			secs = secs[:len(secs)-3]
+		} else if secs[len(secs)-1:] == "0" {
+			secs = secs[:len(secs)-1]
+		}
+		if len(secs) == 0 {
+			secs = "0"
+		}
+		results[s][ptr] = secs
 	}
-
-	// Write logs
-	if err := ioutil.WriteFile(path.Join(artDir, "ocr-errs.txt"), []byte(strings.Join(ocrerrs, "\n")), FILE_PERM); err != nil {
-		return 0, nil, err
-	}
-	if err := ioutil.WriteFile(path.Join(artDir, "ocr-logs.txt"), []byte(strings.Join(ocrlogs, "\n")), FILE_PERM); err != nil {
-		return 0, nil, err
-	}
-
-	return nErrs, results, nil
+	return results, nil
 }
 
 // Creates the explorer website
@@ -216,7 +201,7 @@ func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdf str
 	// Create config.csv
 	configDst := path.Join("explorer", "data", "config.csv")
 	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
-	config := fmt.Sprintf("title,%s Explorer\nimgs-fmt,%s\ntxts-dirs,%s\n[]links,Data;data/\n[]range,CER;0;1\n[]range,Seconds;0;12\n", pdfName, FMT, txtDirs)
+	config := fmt.Sprintf("title,%s Explorer\nimgs-fmt,%s\ntxts-dirs,%s\n[]links,Data;data/\n[]range,CER;0;1\n", pdfName, FMT, txtDirs)
 	if err := ioutil.WriteFile(configDst, []byte(config), FILE_PERM); err != nil {
 		return err
 	}
@@ -294,6 +279,12 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	}
 	sort.Strings(providers)
 
+	// Check if explorer exists
+	_, err := os.Stat("explorer")
+	if err == nil || !os.IsNotExist(err) {
+		return fmt.Errorf("Will overwrite ./explorer directory. Pleae remove")
+	}
+
 	// Get number of pages
 	pc, err := countPages(gs, pdf)
 	if err != nil {
@@ -344,16 +335,32 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	start = time.Now()
 	artDir := path.Join("explorer", "data", "artifacts")
 	ocrDir := path.Join(artDir, "json")
-	nFailed, results, err := runSyncOCR(ptrs, services, artDir, imgsDir, ocrDir)
-	nSuccess := nCalls - nFailed // Should always equal number of json files created
+
+	results, err := execOCR(ptrs, services, artDir, imgsDir, ocrDir)
 	if err != nil {
 		return err
 	}
+	// Calculate OCR stats
+	tPassed, tFailed := 0, 0
+	nPassed, nFailed := make(map[string]int), make(map[string]int)
+	sFailed := ""
+	for _, s := range providers {
+		nPassed[s] = len(results[s])
+		tPassed += nPassed[s]
+		nFailed[s] = len(ptrs) - nPassed[s]
+		tFailed += nFailed[s]
+		if nFailed[s] > 0 { // Record errors if any
+			sFailed += fmt.Sprintf("%s: %d, ", s, nFailed[s])
+		}
+	}
+	if len(sFailed) >= 2 {
+		sFailed = ". Errs: " + sFailed[:len(sFailed)-2] // Remove last ", "
+	}
 	secs = int(time.Since(start) / time.Second)
-	fmt.Printf("%d secs. Total errors: %d\n", secs, nFailed)
+	fmt.Printf("%d secs%s\n", secs, sFailed)
 
 	// Convert to BLW
-	fmt.Printf("[INFO] JSON to BLW (Total: %d) ... \t\t", nSuccess)
+	fmt.Printf("[INFO] JSON to BLW (Total: %d) ... \t\t", tPassed)
 	start = time.Now()
 	blwDir := path.Join(artDir, "blw")
 	os.MkdirAll(blwDir, DIR_PERM)
@@ -411,7 +418,7 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	var res []string
 	for s, p := range sptrs {
 		unified = comm(unified, p)
-		res = append(res, fmt.Sprintf("%s: %d", s, len(p)))
+		res = append(res, fmt.Sprintf("%s: %d", s, len(p))) // TODO res ordering
 	}
 	sort.Strings(unified)
 
@@ -439,7 +446,7 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	err = createExplorer(unified, metrics, txtDirs, pdf)
 	fmt.Printf("done\n")
 
-	fmt.Printf("[INFO] Comparable Ptrs: %d (out of %d). %s\n", len(unified), len(ptrs), strings.Join(res, ","))
+	fmt.Printf("[INFO] Comparable Ptrs: %d (out of %d). %s\n", len(unified), len(ptrs), strings.Join(res, ", "))
 	fmt.Printf("[DONE] Run: tigerocr serve ./explorer\n")
 
 	return nil

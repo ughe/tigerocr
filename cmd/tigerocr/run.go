@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/ughe/tigerocr/ocr"
 )
@@ -16,47 +17,38 @@ func runService(image []byte, Service ocr.Client, dst string) (string, int64, er
 	name := filepath.Base(dst)
 	result, err := Service.Run(image)
 	if err != nil {
-		return "", 0, fmt.Errorf("%v:Run:%v", name, err)
+		return "", 0, fmt.Errorf("%s:Run:%v", name, err)
 	}
 
 	encoded, err := json.Marshal(result)
 	if err != nil {
-		return "", 0, fmt.Errorf("%v:Marshal:%v", name, err)
+		return "", 0, fmt.Errorf("%s:Marshal:%v", name, err)
 	}
 
 	err = ioutil.WriteFile(dst, encoded, 0600)
 	if err != nil {
-		return "", 0, fmt.Errorf("%v:WriteFile:%v", name, err)
+		return "", 0, fmt.Errorf("%s:WriteFile:%v", name, err)
 	}
 	return name, result.Duration, nil
 }
 
-func runOCR(filename string, services map[string]ocr.Client) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	buf, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
+func runOCR(imgPath, dstPath string, stdout, stderr *log.Logger, services map[string]ocr.Client) error {
+	buf, err := ioutil.ReadFile(imgPath)
 	if err != nil {
 		return err
 	}
 
 	ch := make(chan bool, len(services))
 	for s, Service := range services {
-		namepath := path.Join(wd, filepath.Base(filename)+"."+s+".json")
+		baseName := strings.TrimSuffix(filepath.Base(imgPath), filepath.Ext(imgPath)) // Strip image extension
+		namepath := path.Join(dstPath, baseName+"."+s+".json")
+		// log.Logger is thread safe: https://golang.org/pkg/log/#Logger
 		go func(img []byte, Service ocr.Client, p string) {
-			// Note: NOT Thread Safe. Services take different times
 			name, duration, err := runService(img, Service, p)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
+				stderr.Printf("%v\n", err)
 			} else {
-				fmt.Printf("%s:%v\n", name, duration)
+				stdout.Printf("%s:%v\n", name, duration)
 			}
 			ch <- true
 		}(buf, Service, namepath)
@@ -88,9 +80,17 @@ func initServices(keys string, aws, azu, gcp bool) map[string]ocr.Client {
 func runCommand(keys string, aws, azu, gcp bool, filenames []string) error {
 	m := initServices(keys, aws, azu, gcp)
 
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	stdout := log.New(os.Stdout, "", 0)
+	stderr := log.New(os.Stderr, "", 0)
+
 	errs := make([]error, 0)
 	for _, filename := range filenames {
-		if err := runOCR(filename, m); err != nil {
+		if err := runOCR(filename, wd, stdout, stderr, m); err != nil {
 			errs = append(errs, err)
 		}
 	}
