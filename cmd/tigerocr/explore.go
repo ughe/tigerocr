@@ -416,9 +416,11 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	unified := make([]string, len(sptrs[anyKey]))
 	copy(unified, sptrs[anyKey])
 	var res []string
-	for s, p := range sptrs {
+	for _, p := range sptrs {
 		unified = comm(unified, p)
-		res = append(res, fmt.Sprintf("%s: %d", s, len(p))) // TODO res ordering
+	}
+	for _, s := range providers {
+		res = append(res, fmt.Sprintf("%s: %d", s, len(sptrs[s])))
 	}
 	sort.Strings(unified)
 
