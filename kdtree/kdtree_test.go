@@ -370,3 +370,64 @@ func TestRegionSearch(t *testing.T) {
 		t.Fatalf("Expected RegionSearch to produce no results. Found: %d", len(allN))
 	}
 }
+
+func TestDelete(t *testing.T) {
+	// 1. Check empty delete
+	var root *Node = nil
+	ret := root.Delete(0)
+	if ret != nil {
+		t.Fatalf("Expected empty Delete to produce nil")
+	}
+
+	// 2. Check one insert and one delete
+	rootVal := [K]T{0, 0}
+	root = root.Insert(rootVal)
+	if root == nil {
+		t.Fatalf("Expected ret to be root node address")
+	}
+	if !valEquals(root.val, rootVal) {
+		t.Fatalf("Expected ret.val to equal rootVal")
+	}
+	root = root.Delete(0)
+	if root != nil {
+		t.Fatalf("Expected returned tree to be empty")
+	}
+
+	// 3. Instert all uniqueVals twice and then Delete all once
+	root = root.Insert(uniqueVals[0])
+	if root == nil {
+		t.Fatalf("Expected first root insert to be non nil")
+	}
+	if !valEquals(root.val, uniqueVals[0]) {
+		t.Fatalf("Expected first root inserted to be correct val")
+	}
+	for i := 1; i < len(uniqueVals); i++ {
+		ret := root.Insert(uniqueVals[i])
+		if ret != nil {
+			t.Fatalf("Unexpected insert failure for uniqueVals[%d]", i)
+		}
+	}
+	for i := 0; i < len(uniqueVals); i++ {
+		ret := root.Insert(uniqueVals[i])
+		if ret == nil {
+			t.Fatalf("Expected insert to already be complete")
+		}
+		if !valEquals(ret.val, uniqueVals[i]) {
+			t.Fatalf("Expected duplicate insert to return correct val")
+		}
+	}
+	for i := 0; i < len(uniqueVals)-1; i++ {
+		root = root.Delete(0)
+		if root == nil {
+			t.Fatalf("Expected Delete to return non-nil k-d tree")
+		}
+	}
+	// Check last value is correct before deleting it
+	if !valEquals(root.val, uniqueVals[len(uniqueVals)-1]) {
+		t.Fatalf("Expected last value (not deleted) to be last uniqueVals")
+	}
+	root = root.Delete(0)
+	if root != nil {
+		t.Fatalf("Expected last delete to return nil tree")
+	}
+}

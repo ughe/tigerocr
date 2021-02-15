@@ -119,6 +119,7 @@ func (n *Node) regionSearch(target, b bounds, r []*Node, d int) []*Node {
 	return r
 }
 
+// Return a list of *Node's that are within the given bounds
 func (n *Node) RegionSearch(b bounds) []*Node {
 	if n == nil {
 		return nil
@@ -132,10 +133,11 @@ func (n *Node) RegionSearch(b bounds) []*Node {
 	return n.regionSearch(b, everywhere, results, 0)
 }
 
+// Return the absolute value distance between the node and the given value
 func (n *Node) distance(val [K]T) T {
 	var acc T
 	for d := 0; d < K; d++ {
-		if val[d] > n.val[d] {
+		if val[d] >= n.val[d] {
 			acc += val[d] - n.val[d]
 		} else {
 			acc += n.val[d] - val[d]
@@ -146,72 +148,80 @@ func (n *Node) distance(val [K]T) T {
 
 // Returns the node with the smallest value at index j. Requires d,
 // which is the current discriminator level for n
-func (n *Node) jmin(j, d int) *Node {
+func jmin(n **Node, j, d int) **Node {
 	if j == d {
 		// Smallest values must be in LO
-		if n.lo == nil {
+		if (*n).lo == nil {
 			return n
 		}
-		l := n.lo.jmin(j, (d+1)%K)
-		if n.val[j] <= l.val[j] {
+		l := jmin(&(*n).lo, j, (d+1)%K)
+		if (*n).val[j] <= (*l).val[j] {
 			return n
 		} else {
 			return l
 		}
 	} else {
-		if n.lo == nil && n.hi == nil {
+		if (*n).lo == nil && (*n).hi == nil {
 			return n
 		}
-		var l, h *Node
-		if n.lo != nil {
-			l = n.lo.jmin(j, (d+1)%K)
+		var l, h **Node
+		if (*n).lo != nil {
+			l = jmin(&(*n).lo, j, (d+1)%K)
 		}
-		if n.hi != nil {
-			h = n.hi.jmin(j, (d+1)%K)
+		if (*n).hi != nil {
+			h = jmin(&(*n).hi, j, (d+1)%K)
 		}
 
-		if n.val[j] <= l.val[j] && n.val[j] <= h.val[j] {
-			return n
-		} else if l.val[j] <= n.val[j] && l.val[j] <= h.val[j] {
+		if l != nil && *l != nil &&
+			(h != nil && *h != nil && (*l).val[j] <= (*h).val[j]) &&
+			(n != nil && *n != nil && (*l).val[j] <= (*n).val[j]) {
 			return l
-		} else { // we know: h.val[j] <= n.val[j] && h.val[j] <= l.val[j]
-			return h
+		} else if h != nil && *h != nil &&
+			(l != nil && *l != nil && (*h).val[j] <= (*l).val[j]) &&
+			(n != nil && *n != nil && (*h).val[j] <= (*h).val[j]) {
+			return n
+		} else { // we know: (*n).val[j] <= (*l).val[j] && (*n).val[j] <= (*h).val[j]
+			return n
 		}
 	}
 }
 
 // Returns the node with the largest value at index j. Requires d,
 // which is the current discriminator level for n
-func (n *Node) jmax(j, d int) *Node {
+func jmax(n **Node, j, d int) **Node {
 	if j == d {
 		// Largest values must be in HI
-		if n.hi == nil {
+		if (*n).hi == nil {
 			return n
 		}
-		h := n.hi.jmax(j, (d+1)%K)
-		if n.val[j] >= h.val[j] {
+		h := jmax(&(*n).hi, j, (d+1)%K)
+		if (*n).val[j] >= (*h).val[j] {
 			return n
 		} else {
 			return h
 		}
 	} else {
-		if n.lo == nil && n.hi == nil {
+		if (*n).lo == nil && (*n).hi == nil {
 			return n
 		}
-		var l, h *Node
-		if n.lo != nil {
-			l = n.lo.jmax(j, (d+1)%K)
+		var l, h **Node
+		if (*n).lo != nil {
+			l = jmax(&(*n).lo, j, (d+1)%K)
 		}
-		if n.hi != nil {
-			h = n.hi.jmax(j, (d+1)%K)
+		if (*n).hi != nil {
+			h = jmax(&(*n).hi, j, (d+1)%K)
 		}
 
-		if n.val[j] >= l.val[j] && n.val[j] >= h.val[j] {
-			return n
-		} else if l.val[j] >= n.val[j] && l.val[j] >= h.val[j] {
+		if l != nil && *l != nil &&
+			(h != nil && *h != nil && (*l).val[j] >= (*h).val[j]) &&
+			(n != nil && *n != nil && (*l).val[j] >= (*n).val[j]) {
 			return l
-		} else { // we know: h.val[j] >= n.val[j] && h.val[j] >= l.val[j]
+		} else if h != nil && *h != nil &&
+			(l != nil && *l != nil && (*h).val[j] >= (*l).val[j]) &&
+			(n != nil && *n != nil && (*h).val[j] >= (*h).val[j]) {
 			return h
+		} else { // we know: (*n).val[j] >= (*l).val[j] && (*n).val[j] >= (*h).val[j]
+			return n
 		}
 	}
 }
@@ -220,7 +230,10 @@ func (n *Node) jmax(j, d int) *Node {
 // discriminator, which increments every level of the tree and is mod K
 // Repeated deletes will unbalance tree since hi is removed before lo
 func (P *Node) Delete(j int) *Node {
-	//var parent *Node // TODO
+	if P == nil {
+		return nil
+	}
+
 	var child **Node
 	var Q Node // Q will take P's place as the new root
 
@@ -230,12 +243,10 @@ func (P *Node) Delete(j int) *Node {
 	}
 	if P.hi != nil {
 		// D3
-		// parent, child = P.hi.jmin(j, j+1)
-		// TODO
+		child = jmin(&P.hi, j, (j+1)%K)
 	} else {
 		// D4
-		// parent, child = P.lo.jmax(j, j+1)
-		// TODO
+		child = jmax(&P.lo, j, (j+1)%K)
 	}
 
 	// D5
