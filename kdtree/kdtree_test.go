@@ -2,6 +2,7 @@ package kdtree
 
 import (
 	"math/rand"
+	"sort"
 	"testing"
 )
 
@@ -273,7 +274,7 @@ func TestRegionSearch(t *testing.T) {
 
 	// 1. Check each point is returned given bounds for itself
 	for i := 0; i < N; i++ {
-		var res *[]*Node
+		var res []*Node
 		res = root.RegionSearch([2][K]T{
 			points[i],
 			points[i],
@@ -281,19 +282,91 @@ func TestRegionSearch(t *testing.T) {
 		if res == nil {
 			t.Fatalf("Expected RegionSearch to return a result at %d", i)
 		}
-		if len(*res) != 1 {
-			t.Fatalf("Expected RegionSearch to have len(*res) == 1. Got: %d", len(*res))
+		if len(res) != 1 {
+			t.Fatalf("Expected RegionSearch to have len(res) == 1. Got: %d", len(res))
 		}
-		if !valEquals((*res)[0].val, points[i]) {
+		if !valEquals(res[0].val, points[i]) {
 			t.Fatalf("Expected RegionSearch to return the right node")
 		}
 	}
 
 	// 2. Check that entire bounds returns all nodes
+	var allN []*Node
+	allN = root.RegionSearch([2][K]T{
+		[K]T{0, 0},
+		[K]T{T(N - 1), T(N - 1)},
+	})
+	if allN == nil {
+		t.Fatalf("Expected RegionSearch results to be non nil")
+	}
+	if len(allN) != N {
+		t.Fatalf("Expected RegionSearch %d results. Found %d", N, len(allN))
+	}
+	// Sort points and allN for comparability
+	sort.Slice(points[:], func(i, j int) bool {
+		return points[i][0] < points[j][0]
+	})
+	sort.Slice(allN, func(i, j int) bool {
+		return allN[i].val[0] < allN[j].val[0]
+	})
+	for i := 0; i < N; i++ {
+		if !valEquals(allN[i].val, points[i]) {
+			t.Fatalf("Expected RegionSearch vals to equal. %d %d %d", i, allN[i].val[0], points[i][0])
+		}
+	}
 
 	// 3. Check that top half returns top half
+	if N%2 != 0 {
+		t.Fatalf("Internal tests error. Expects %d to be even", N)
+	}
+	allN = root.RegionSearch([2][K]T{
+		[K]T{T(N / 2), T(N / 2)},
+		[K]T{T(N), T(N)},
+	})
+	if allN == nil {
+		t.Fatalf("Unexpected RegionSearch nil result")
+	}
+	if len(allN) != N/2 {
+		t.Fatalf("Expected len(allN) == %d. Found: %d", N/2, len(allN))
+	}
+	sort.Slice(allN, func(i, j int) bool {
+		return allN[i].val[0] < allN[j].val[0]
+	})
+	for i := 0; i < len(allN); i++ {
+		if !valEquals(allN[i].val, points[N/2+i]) {
+			t.Fatalf("Expected RegionSearch vals to equal")
+		}
+	}
 
 	// 4. Check that bottom half returns bottom half
+	allN = root.RegionSearch([2][K]T{
+		[K]T{0, 0},
+		[K]T{N/2 - 1, N/2 - 1},
+	})
+	if allN == nil {
+		t.Fatalf("Unexpected RegionSearch nil result")
+	}
+	if len(allN) != N/2 {
+		t.Fatalf("Expected len(allN) == %d. Found: %d", N/2, len(allN))
+	}
+	sort.Slice(allN, func(i, j int) bool {
+		return allN[i].val[0] < allN[j].val[0]
+	})
+	for i := 0; i < N/2; i++ {
+		if !valEquals(allN[i].val, points[i]) {
+			t.Fatalf("Expected RegionSearch vals to equal")
+		}
+	}
 
 	// 5. Check that non intersecting bounds return nil
+	allN = root.RegionSearch([2][K]T{
+		[K]T{0, T(N + 1)},
+		[K]T{T(N), T(N + 2)},
+	})
+	if allN == nil {
+		t.Fatalf("Expected RegionSearch to never return nil")
+	}
+	if len(allN) != 0 {
+		t.Fatalf("Expected RegionSearch to produce no results. Found: %d", len(allN))
+	}
 }

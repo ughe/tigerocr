@@ -98,10 +98,10 @@ func intersects(b0, b1 bounds) bool {
 	return true
 }
 
-func (n *Node) regionSearch(target, b bounds, r *[]*Node, d int) {
+func (n *Node) regionSearch(target, b bounds, r []*Node, d int) []*Node {
 	// R1
 	if n.inRegion(target) {
-		*r = append(*r, n)
+		r = append(r, n)
 	}
 	// R2
 	bl := bounds{b[0], b[1]}
@@ -110,15 +110,16 @@ func (n *Node) regionSearch(target, b bounds, r *[]*Node, d int) {
 	bh[0][d] = n.val[d]
 	// R3
 	if n.lo != nil && intersects(target, bl) {
-		n.lo.regionSearch(target, bl, r, (d+1)%K)
+		r = n.lo.regionSearch(target, bl, r, (d+1)%K)
 	}
 	// R4
 	if n.hi != nil && intersects(target, bh) {
-		n.hi.regionSearch(target, bh, r, (d+1)%K)
+		r = n.hi.regionSearch(target, bh, r, (d+1)%K)
 	}
+	return r
 }
 
-func (n *Node) RegionSearch(b bounds) *[]*Node {
+func (n *Node) RegionSearch(b bounds) []*Node {
 	if n == nil {
 		return nil
 	}
@@ -128,8 +129,7 @@ func (n *Node) RegionSearch(b bounds) *[]*Node {
 		everywhere[1][i] = maxT()
 	}
 	results := make([]*Node, 0)
-	n.regionSearch(b, everywhere, &results, 0)
-	return &results
+	return n.regionSearch(b, everywhere, results, 0)
 }
 
 func (n *Node) distance(val [K]T) T {
