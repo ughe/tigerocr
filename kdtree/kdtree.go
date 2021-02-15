@@ -4,6 +4,8 @@ package kdtree
 // Multidimensional Binary Search Trees Used for Associative Searching
 // https://dl.acm.org/doi/10.1145/361002.361007
 
+import "sort"
+
 const K = 2 // Number of dimensions
 
 type T = uint // dimension type. minT and maxT functions MUST match T
@@ -259,16 +261,46 @@ func (P *Node) Delete(j int) *Node {
 	return &Q
 }
 
-/*
-func (n *Node) optimize(j int) *Node {
+// Destructively flattens a kd-tree into a slice of Node's
+func (n *Node) flatten() []Node {
+	if n == nil {
+		return nil
+	}
+	lo, hi := n.lo.flatten(), n.hi.flatten()
+	n.lo, n.hi = nil, nil
+	if lo != nil && hi != nil {
+		return append(lo, append(hi, *n)...)
+	} else if lo != nil {
+		return append(lo, *n)
+	} else if hi != nil { // hi != nil
+		return append(hi, *n)
+	} else {
+		return []Node{*n}
+	}
+}
+
+// Returns a new tree that is balanced. Requires j, the root's discriminator
+func optimize(j int, a []Node) *Node {
+	// O1
+	if a == nil || len(a) == 0 {
+		return nil
+	}
+	// O2: find j-median element of a
+	sort.Slice(a[:], func(m, n int) bool {
+		return a[m].val[j] < a[n].val[j]
+	})
+	m := len(a) / 2
+	P := a[m]
+	// O3, O4
+	P.lo = optimize((j+1)%K, a[:m])
+	P.hi = optimize((j+1)%K, a[m+1:])
+	return &P
+}
+
+func (n *Node) Optimize() *Node {
 	if n == nil {
 		return nil
 	}
 
-	// Flatten
+	return optimize(0, n.flatten())
 }
-
-func (n *Node) Optimize() *Node {
-	return n.optimize(0)
-}
-*/

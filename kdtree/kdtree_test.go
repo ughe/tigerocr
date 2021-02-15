@@ -431,3 +431,120 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Expected last delete to return nil tree")
 	}
 }
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a >= b {
+		return a
+	}
+	return b
+}
+
+func treeMinDepth(n *Node) int {
+	if n == nil {
+		return 0
+	}
+	if n.lo == nil || n.hi == nil {
+		return 1
+	}
+	l, h := 1+treeMinDepth(n.lo), 1+treeMinDepth(n.hi)
+	if l <= h {
+		return l
+	} else {
+		return h
+	}
+}
+
+func treeMaxDepth(n *Node) int {
+	if n == nil {
+		return 0
+	}
+	if n.lo == nil && n.hi == nil {
+		return 1
+	}
+	l, h := 1+treeMaxDepth(n.lo), 1+treeMaxDepth(n.hi)
+	if l >= h {
+		return l
+	} else {
+		return h
+	}
+}
+
+func isBalanced(n *Node) bool {
+	if n == nil {
+		return true
+	}
+	if n.lo == nil && n.hi == nil {
+		return true
+	}
+
+	loMin, loMax := treeMinDepth(n.lo), treeMaxDepth(n.lo)
+	hiMin, hiMax := treeMinDepth(n.hi), treeMaxDepth(n.hi)
+	min, max := min(loMin, hiMin), max(loMax, hiMax)
+	if max-min > 1 {
+		return false
+	}
+	return true
+}
+
+func TestOptimize(t *testing.T) {
+	// 1. Optimize empty tree
+	var root *Node = nil
+	if root.Optimize() != nil {
+		t.Fatalf("Expected Optimize of nil to be nil")
+	}
+
+	// 2. Optimize of three elements
+	const N = 3
+	if N%2 == 0 {
+		t.Fatalf("Internal testing error. Expected N to be odd")
+	}
+	var n [N][K]T
+	for i := 0; i < N; i++ {
+		n[i] = [K]T{T(i), T(i)}
+	}
+	root = root.Insert(n[0])
+	if !valEquals(root.val, n[0]) {
+		t.Fatalf("Expected Optimize insert val to be correct")
+	}
+	for i := 1; i < N; i++ {
+		if root.Insert(n[i]) != nil {
+			t.Fatalf("Expected Optimize insert to return nil")
+		}
+	}
+	// Check tree is not balanced
+	var tmp *Node = root
+	for i := 0; i < N; i++ {
+		if tmp.lo != nil {
+			t.Fatalf("Expected every inserted Node to have lo be nil")
+		}
+		tmp = tmp.hi
+	}
+	if isBalanced(root) {
+		t.Fatalf("Expected tree to be unbalanced")
+	}
+	// Check tree is balanced
+	root = root.Optimize()
+	if root == nil {
+		t.Fatalf("Expected optimized tree to be non nil")
+	}
+	if !valEquals(root.val, n[N/2]) {
+		t.Fatalf("Expected optimized middle value to be center of n")
+	}
+	if !isBalanced(root) {
+		t.Fatalf("Expected tree to be balanced after optimize")
+	}
+}
