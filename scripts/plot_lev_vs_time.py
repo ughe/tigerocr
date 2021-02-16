@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import numpy as np
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -15,7 +16,9 @@ convert = [
         lambda x: min(max(int(x)/1000, 0), 12),
 ]
 providersAxis = ["AWS", "Azure", "GCP"]
-metricsAxis = ["CER", "Seconds"]
+metricsAxis = ["CER", "Time"]
+metricsAxisFull = ["Character Error Rate (CER)", "Time [Seconds]"]
+metricFmt = ["%.05f", "%d"]
 # END configuration
 
 def save(fig, fname, fopen=False):
@@ -31,7 +34,7 @@ def init_ax(ax, title, max_time=12, max_dist=1):
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
     ax.set_title(title)
 
-def main(fname, outf):
+def main(fname, outf, title):
     data = [x.split(",") for x in open(fname, "r").read().strip().split("\n")]
     res = {}
     for m in metrics:
@@ -59,30 +62,53 @@ def main(fname, outf):
     ax1 = fig.add_subplot(spec[1, 1])
     ax2 = fig.add_subplot(spec[2, 1])
     ax = fig.add_subplot(spec[0:, 0])
-    
+
     init_ax(ax, "")
-    ax.set_title("%s vs. %s: %d Images" % (metricsAxis[0], metricsAxis[1], size), size="xx-large")
+    ax.set_title("%s OCR %s vs. %s: %d Images" % (title, metricsAxis[0], metricsAxis[1], size), size="xx-large")
     init_ax(ax0, providersAxis[0])
     init_ax(ax1, providersAxis[1])
     init_ax(ax2, providersAxis[2])
     ax0.scatter(*p0, color="orange", s=.001, label=providersAxis[0])
     ax1.scatter(*p1, color="blue", s=.001, label=providersAxis[1])
     ax2.scatter(*p2, color="red", s=.001, label=providersAxis[2])
-    
+
     ax.grid(linewidth=1, alpha=0.2)
-    ax.set_xlabel(metricsAxis[0])
-    ax.set_ylabel(metricsAxis[1])
+    ax.set_xlabel(metricsAxisFull[0])
+    ax.set_ylabel(metricsAxisFull[1])
     ax.scatter(*p0, color="orange", s=1, label=providersAxis[0])
     ax.scatter(*p1, color="blue", s=1, label=providersAxis[1])
     ax.scatter(*p2, color="red", s=1, label=providersAxis[2])
-    
+
     plt.close()
     save(fig, outf)
 
+def printQuartiles(fname):
+    data = [x.split(",") for x in open(fname, "r").read().strip().split("\n")]
+    res = {}
+    for m in metrics:
+        res[m] = {}
+    for row in data:
+        lbl = row[0].lower()
+        for m in metrics:
+            if m in lbl:
+                for p in providers:
+                    if p in lbl:
+                        res[m][p] = [float(x) for x in row[1:]]
+
+    # Print out the quantiles
+    print("Quartiles:\tmin, Q1, med, Q2, max")
+    qs = [0, 25, 50, 75, 100]
+    for i, m in enumerate(metrics):
+        for p in providers:
+            q = np.percentile(res[m][p], qs)
+            print(p + " " + m + ":\t" + ((metricFmt[i] + ", ")*len(qs) % (q[0], q[1], q[2], q[3], q[4])))
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("usage: ./plot_lev_vs_time.py results.csv out.png")
+    if len(sys.argv) != 4:
+        print("usage: ./plot_lev_vs_time.py results.csv out.png title")
         sys.exit(1)
     fname = sys.argv[1]
     outf = sys.argv[2]
-    main(fname, outf)
+    title = sys.argv[3]
+    main(fname, outf, title)
+    printQuartiles(fname)

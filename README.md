@@ -5,27 +5,12 @@
 ## Install
 
 ```
-pip install -r requirements.txt
 go install ./...
-cp scripts/* $GOPATH/bin/
 ```
 
 ## Create Keys
 
 Follow the documentation below to create keys for `AWS`, `Azure`, and `GCP`
-
-```
-$ tigerocr --help
-usage: tigerocr <command> [arguments]
-
-The commands are:
-
-	run     	 execute ocr on selected providers
-	annotate	 draw bounding boxes of words on the original image
-	editdist	 calculate levenshtein distance of two plaintext files
-	convert 	 convert json ocr responses to unified blw files
-	extract 	 extract metadata from a blw or json datafile
-```
 
 ```
 $ tigerocr run --help
@@ -45,8 +30,25 @@ usage: tigerocr run [-keys=~/keydir/] [-aws] [-azure] [-gcp] image.jpg
     	Path to credentials directory (default "~/.aws")
 ```
 
+## Available Commands
+
+```
+$ tigerocr --help
+usage: tigerocr <command> [arguments]
+
+The commands are:
+
+	run     	 execute ocr on selected providers
+	annotate	 draw bounding boxes of words on the original image
+	editdist	 calculate levenshtein distance of two text files
+	convert 	 convert json ocr responses to unified blw format
+	extract 	 extract metadata from a blw or json datafile
+	explore 	 execute pdf ocr and output results as a web explorer
+	serve   	 serve current directory at 127.0.0.1:8080
+```
+
 ## OCR PDF
 
 ```
-ocr_pdf.sh file.pdf
+tigerocr explore -keys ~/.aws -aws -azure -gcp book.pdf
 ```
