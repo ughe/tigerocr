@@ -63,14 +63,20 @@ def main(fname, outf, title):
     ax2 = fig.add_subplot(spec[2, 1])
     ax = fig.add_subplot(spec[0:, 0])
 
-    init_ax(ax, "")
-    ax.set_title("%s OCR %s vs. %s: %d Images" % (title, metricsAxis[0], metricsAxis[1], size), size="xx-large")
     init_ax(ax0, providersAxis[0])
     init_ax(ax1, providersAxis[1])
     init_ax(ax2, providersAxis[2])
     ax0.scatter(*p0, color="orange", s=.001, label=providersAxis[0])
     ax1.scatter(*p1, color="blue", s=.001, label=providersAxis[1])
     ax2.scatter(*p2, color="red", s=.001, label=providersAxis[2])
+
+    maxy = 12
+    ax.set_xlim(1.0, 0)
+    ax.set_xticks([x/10 for x in range(0, 11)])
+    ax.set_ylim(0, maxy)
+    ax.set_yticks(range(0, maxy+1, 3))
+    ax.yaxis.set_minor_locator(AutoMinorLocator(2))
+    ax.set_title("%s %s vs. %s: %s Images" % (title, metricsAxis[0], metricsAxis[1], '{:,}'.format(size)), size="xx-large")
 
     ax.grid(linewidth=1, alpha=0.2)
     ax.set_xlabel(metricsAxisFull[0])
