@@ -1,52 +1,20 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
-
-	"github.com/ughe/tigerocr/ocr"
 )
 
 func extractCommand(filename string, stat, algoid, speed, date, text bool) error {
-	var detection *ocr.Detection
 	raw, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
-	switch filepath.Ext(filename) {
-	case ".blw":
-		if err := json.Unmarshal(raw, &detection); err != nil {
-			return err
-		}
-	case ".json":
-		// Dynamically convert json to blw format (entails overhead)
-		var result ocr.Result
-		if err := json.Unmarshal(raw, &result); err != nil {
-			return err
-		}
-
-		var c ocr.Client
-		switch result.Service {
-		case "AWS":
-			c = ocr.AWSClient{CredentialsPath: ""}
-		case "Azure":
-			c = ocr.AzureClient{CredentialsPath: ""}
-		case "GCP":
-			c = ocr.GCPClient{CredentialsPath: ""}
-		default:
-			return fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
-		}
-		// We can use bogus width, height of zero since we do not return
-		// any information related to the physical coordinates and we do
-		// not save this new detection instance
-		detection, err = c.ResultToDetection(&result, 0, 0)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("Expected *.json or *.blw coordinate file instead of: %v", filepath.Ext(filename))
+	// Extraction never uses image width or height. So okay to use bogus
+	bogusImg := []byte("P3\n1 1\n1")
+	detection, err := convertToBLW(bogusImg, raw, filename)
+	if err != nil {
+		return err
 	}
 
 	// Extract the fields

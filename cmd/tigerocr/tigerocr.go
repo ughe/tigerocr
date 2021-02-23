@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"image"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/ughe/tigerocr/ocr"
@@ -24,25 +26,50 @@ func abs(n int) int {
 	}
 }
 
-func convertToBLW(img []byte, result *ocr.Result) (*ocr.Detection, error) {
-	var c ocr.Client
-	switch result.Service {
-	case "AWS":
-		c = ocr.AWSClient{CredentialsPath: ""}
-	case "Azure":
-		c = ocr.AzureClient{CredentialsPath: ""}
-	case "GCP":
-		c = ocr.GCPClient{CredentialsPath: ""}
-	default:
-		return nil, fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
-	}
+func imgToWidthHeight(img []byte) (int, int, error) {
 	m, _, err := image.Decode(bytes.NewReader(img))
 	if err != nil {
-		return nil, err
+		return 0, 0, err
 	}
 	mb := m.Bounds()
 	width, height := abs(mb.Max.X-mb.Min.X), abs(mb.Max.Y-mb.Min.Y)
-	return c.ResultToDetection(result, width, height)
+	return width, height, nil
+}
+
+// Converts a raw buffer to BLW. If format is ocr.Result, converts to ocr.Detection
+func convertToBLW(img []byte, raw []byte, rawName string) (*ocr.Detection, error) {
+	switch filepath.Ext(rawName) {
+	case ".blw":
+		var detection *ocr.Detection
+		if err := json.Unmarshal(raw, &detection); err != nil {
+			return nil, err
+		}
+		return detection, nil
+	case ".json":
+		// Dynamically convert json to blw format (entails overhead)
+		var result ocr.Result
+		if err := json.Unmarshal(raw, &result); err != nil {
+			return nil, err
+		}
+		var c ocr.Client
+		switch result.Service {
+		case "AWS":
+			c = ocr.AWSClient{CredentialsPath: ""}
+		case "Azure":
+			c = ocr.AzureClient{CredentialsPath: ""}
+		case "GCP":
+			c = ocr.GCPClient{CredentialsPath: ""}
+		default:
+			return nil, fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
+		}
+		width, height, err := imgToWidthHeight(img)
+		if err != nil {
+			return nil, err
+		}
+		return c.ResultToDetection(&result, width, height)
+	default:
+		return nil, fmt.Errorf("Expected *.json or *.blw coordinate file instead of: %v", filepath.Ext(rawName))
+	}
 }
 
 func main() {
@@ -95,9 +122,11 @@ func main() {
 
 	// convert command
 	convertSet := flag.NewFlagSet("convert", flag.ExitOnError)
+	diro := convertSet.Bool("pdf", false, "Convert to PDF. Same arguments as directories, not files")
+	filter := convertSet.String("select", "", "Select BLW prefix for PDF. i.e. -pdf -select=azu for *.azu.blw")
 	convertSet.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s %s img.jpg ocr.json\n\n", os.Args[0], os.Args[1])
-		// convertSet.PrintDefaults() // No flags used
+		fmt.Fprintf(os.Stderr, "usage: %s %s img.jpg ocr.json\nusage: %s %s -pdf imgs/ blw/\n\n", os.Args[0], os.Args[1], os.Args[0], os.Args[1])
+		convertSet.PrintDefaults()
 	}
 
 	// extract command
@@ -137,7 +166,7 @@ func main() {
 			"annotate\t draw bounding boxes of words on the original image",
 			"merge   \t combine multiple blw files for boosted transcription",
 			"editdist\t calculate levenshtein distance of two text files",
-			"convert \t convert json ocr responses to unified blw format",
+			"convert \t convert json ocr responses to unified blw format (*)",
 			"extract \t extract metadata from a blw or json datafile",
 			"explore \t execute pdf ocr and output results as a web explorer",
 			"serve   \t serve current directory at "+addr,
@@ -196,7 +225,12 @@ func main() {
 		}
 		imgFilename := convertSet.Arg(0)
 		jsnFilename := convertSet.Arg(1)
-		err = convertCommand(imgFilename, jsnFilename)
+		if *diro {
+			// Accepts directories instead of filenames
+			err = convertCommandPDF(imgFilename, jsnFilename, *filter)
+		} else {
+			err = convertCommand(imgFilename, jsnFilename)
+		}
 	case "extract":
 		extractSet.Parse(os.Args[2:])
 		if extractSet.NArg() != 1 {

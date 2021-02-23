@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"image/color"
 	"io/ioutil"
@@ -48,30 +47,12 @@ func annotateCommand(b, l, w bool, imageFilename, coordFilename string) error {
 	if err != nil {
 		return err
 	}
-
-	var detection *ocr.Detection
 	raw, err := ioutil.ReadFile(coordFilename)
 	if err != nil {
 		return err
 	}
-	switch filepath.Ext(coordFilename) {
-	case ".blw":
-		if err := json.Unmarshal(raw, &detection); err != nil {
-			return err
-		}
-	case ".json":
-		// Dynamically convert json to blw format (entails overhead)
-		var result ocr.Result
-		if err := json.Unmarshal(raw, &result); err != nil {
-			return err
-		}
-		detection, err = convertToBLW(buf, &result)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("Expected *.json or *.blw coordinate file instead of: %v", filepath.Ext(coordFilename))
-	}
+
+	detection, err := convertToBLW(buf, raw, coordFilename)
 
 	blw := ""
 	if b {

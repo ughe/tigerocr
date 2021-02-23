@@ -20,7 +20,7 @@ import (
 	"github.com/ughe/tigerocr/ocr"
 )
 
-const DPI = "300"
+const DPI = 300
 const FMT = "png"
 const QUA = "00" // imagemagick.org/script/command-line-options.php#quality
 
@@ -80,7 +80,7 @@ func convertPDF(magick []string, dstDir, pdf string, pageCount int) ([]string, e
 	nDigits := strconv.Itoa(int(math.Ceil(math.Log10(float64(pageCount)))))
 	ptr := pdfName + "-%0" + nDigits + "d"
 	out := path.Join(dstDir, ptr+"."+FMT)
-	magick = append(magick, "-density", DPI, "-alpha", "off", "-quality", QUA, pdf, out)
+	magick = append(magick, "-density", fmt.Sprintf("%d", DPI), "-alpha", "off", "-quality", QUA, pdf, out)
 	_, err := exec.Command(magick[0], magick[1:]...).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
