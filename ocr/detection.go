@@ -160,7 +160,7 @@ func encodeBounds(b Bounds) string {
 	return encodeRawBounds(b.X, b.Y, b.W, b.H)
 }
 
-func decodeBounds(bounds string) (Bounds, error) {
+func DecodeBounds(bounds string) (Bounds, error) {
 	s := strings.SplitN(bounds, ",", 4)
 	if len(s) != 4 {
 		return Bounds{}, errors.New(fmt.Sprintf(
@@ -186,7 +186,7 @@ func decodeBounds(bounds string) (Bounds, error) {
 }
 
 func decodeRawBounds(bounds string) (int, int, int, int, error) {
-	b, err := decodeBounds(bounds)
+	b, err := DecodeBounds(bounds)
 	return b.X, b.Y, b.W, b.H, err
 }
 

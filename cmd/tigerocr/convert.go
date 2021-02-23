@@ -73,7 +73,6 @@ func stripExt(ls []os.FileInfo, subExt string) ([]string, string) {
 }
 
 func convertCommandPDF(imgDir, blwDir, providerPrefix string) error {
-	hideText := true
 	imgDirListing, err := ioutil.ReadDir(imgDir)
 	if err != nil {
 		return err
@@ -102,7 +101,9 @@ func convertCommandPDF(imgDir, blwDir, providerPrefix string) error {
 
 	dstFilename := pointers[0] + ".pdf"
 	pdf := gofpdf.New("P", "pt", "Letter", "")
-	pdf.SetFont("courier", "", 12)
+	fontSize := 12.0
+	pdf.SetFont("Courier", "", fontSize)
+	hideText := false // gs cannot read text that is hidden
 	hiddenLayer := pdf.AddLayer("OCR", !hideText)
 	for _, ptr := range pointers {
 		// Read the image
@@ -137,8 +138,7 @@ func convertCommandPDF(imgDir, blwDir, providerPrefix string) error {
 		}
 		// Add the image to the PDF
 		pdf.RegisterImageOptionsReader(ptr, opt, bytes.NewReader(buf)).SetDpi(float64(DPI))
-		pdf.ImageOptions(ptr, 0, 0, w, h, false, opt, 0, "")
-		// Add the text in an invisible layer
+		// Add the text in behind the image (instead of in invisible layer)
 		pdf.BeginLayer(hiddenLayer)
 		fmt.Println("[INFO] Drawing text on a page")
 		for _, b := range detection.Blocks {
@@ -149,18 +149,25 @@ func convertCommandPDF(imgDir, blwDir, providerPrefix string) error {
 						return err
 					}
 					ww, wh := float64(bnds.W), float64(bnds.H) // Word W,H
-					fitFontSize(pdf, w.Text, ww)
-					// If font is smaller than height, shift up by difference
+					size := fitFontSize(w.Text, ww)
+					if size != 0 && size != fontSize {
+						fontSize = size // Update last font size to new
+						pdf.SetFontSize(fontSize)
+					}
+					// If font is smaller than height, shift up by diff
 					_, h := pdf.GetFontSize()
 					diff := 0.0
 					if wh > h {
 						diff = (wh - h)
 					}
-					pdf.Text(float64(bnds.X), float64(bnds.Y)+wh-diff, w.Text)
+					// Set font if the size has changed
+					pdf.Text(float64(bnds.X), float64(bnds.Y)+wh-diff, w.Text+" ")
 				}
 			}
 		}
 		pdf.EndLayer()
+		// Image goes on top of the text
+		pdf.ImageOptions(ptr, 0, 0, w, h, false, opt, 0, "")
 	}
 	if err := pdf.OutputFileAndClose(dstFilename); err != nil {
 		return err
@@ -170,23 +177,26 @@ func convertCommandPDF(imgDir, blwDir, providerPrefix string) error {
 	return nil
 }
 
-// Fits (& sets) the font size in given width in points. Assumes fixed width font
-// NOTE: A binary search in font size would probably be faster than this linear one
-func fitFontSize(pdf *gofpdf.Fpdf, s string, width float64) {
+// Fits font (courier) size to width of string s
+func fitFontSize(s string, width float64) float64 {
 	if len(s) == 0 {
-		return
+		return 0
 	}
-	// fs, h := pdf.GetFontSize() // Ignoring the font height
-	fs := width / float64(len(s)) * 1.6 // Attempt to reduce scaling required
-	// Scale font up if too small
+	// Create dummy PDF to call GetStringWidth on font size without editing
+	pdf := gofpdf.New("P", "pt", "Letter", "")
+	pdf.SetFont("Courier", "", 12)
+	// Estimate the correct font size
+	fs := float64(int(width / float64(len(s)) * 1.6))
 	pdf.SetFontSize(fs)
-	for pdf.GetStringWidth(s) < width {
-		fs = fs + 1
-		pdf.SetFontSize(fs)
-	}
 	// Scale font down if too big
 	for pdf.GetStringWidth(s) > width && fs > 1 {
 		fs = fs - 1
 		pdf.SetFontSize(fs)
 	}
+	// Scale font up if too small
+	for pdf.GetStringWidth(s) < width {
+		fs = fs + 1
+		pdf.SetFontSize(fs)
+	}
+	return fs
 }
