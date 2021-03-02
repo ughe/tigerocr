@@ -145,11 +145,11 @@ func (_ AzureClient) ResultToDetection(result *Result, _, _ int) (*Detection, er
 		for _, l := range r.Lines {
 			words := make([]Word, 0, len(l.Words))
 			for _, w := range l.Words {
-				words = append(words, Word{1.0, w.Bounds, w.Text})
+				words = append(words, Word{w.Bounds, w.Text})
 			}
-			lines = append(lines, Line{1.0, l.Bounds, words})
+			lines = append(lines, Line{l.Bounds, words})
 		}
-		blocks = append(blocks, Block{1.0, r.Bounds, lines})
+		blocks = append(blocks, Block{r.Bounds, lines})
 	}
 	algoID := sanitizeString(result.Service[:3] + "-" + result.Version)
 	millis := uint32(result.Duration)

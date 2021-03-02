@@ -117,19 +117,19 @@ func (_ GCPClient) ResultToDetection(result *Result, _, _ int) (*Detection, erro
 						symbols = append(symbols, s.Text)
 					}
 					word := strings.Join(symbols, "")
-					words = append(words, Word{w.Confidence, bounds, word})
+					words = append(words, Word{bounds, word})
 				}
 				bounds, err := polyToBox(l.BoundingBox)
 				if err != nil {
 					return nil, err
 				}
-				lines = append(lines, Line{l.Confidence, bounds, words})
+				lines = append(lines, Line{bounds, words})
 			}
 			bounds, err := polyToBox(r.BoundingBox)
 			if err != nil {
 				return nil, err
 			}
-			blocks = append(blocks, Block{r.Confidence, bounds, lines})
+			blocks = append(blocks, Block{bounds, lines})
 		}
 	}
 	algoID := sanitizeString(result.Service[:3] + "-" + result.Version)

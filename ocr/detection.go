@@ -25,19 +25,16 @@ type Detection struct {
 }
 
 type Block struct {
-	Confidence float32 `json:"conf"`
 	Bounds     string  `json:"xywh"`
 	Lines      []Line  `json:"lines"`
 }
 
 type Line struct {
-	Confidence float32 `json:"conf"`
 	Bounds     string  `json:"xywh"`
 	Words      []Word  `json:"words"`
 }
 
 type Word struct {
-	Confidence float32 `json:"conf"`
 	Bounds     string  `json:"xywh"`
 	Text       string  `json:"text"`
 }

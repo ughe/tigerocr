@@ -64,7 +64,7 @@ func (c AWSClient) Run(image []byte) (*Result, error) {
 	blocks := result.Blocks
 	var lines []string
 	for _, block := range blocks {
-		if *block.BlockType == "LINE" && *block.Confidence >= 0.0 {
+		if *block.BlockType == "LINE" {
 			lines = append(lines, *block.Text)
 		}
 	}
@@ -156,21 +156,11 @@ func (_ AWSClient) ResultToDetection(result *Result, width, height int) (*Detect
 				if !ok {
 					return nil, fmt.Errorf("Word %v not found", *id)
 				}
-				words = append(words, Word{float32(*w.Confidence), geometryToBox(w.Geometry, width, height), *w.Text})
+				words = append(words, Word{geometryToBox(w.Geometry, width, height), *w.Text})
 			}
-			lines = append(lines, Line{float32(*l.Confidence), geometryToBox(l.Geometry, width, height), words})
+			lines = append(lines, Line{geometryToBox(l.Geometry, width, height), words})
 		}
-		conf := float32(0.0)
-		if r.Confidence != nil {
-			conf = float32(*r.Confidence)
-		} else {
-			// Mean of lines
-			for _, l := range lines {
-				conf += l.Confidence
-			}
-			conf /= float32(len(lines))
-		}
-		blocks = append(blocks, Block{conf, geometryToBox(r.Geometry, width, height), lines})
+		blocks = append(blocks, Block{geometryToBox(r.Geometry, width, height), lines})
 	}
 
 	algoID := sanitizeString(result.Service[:3] + "-" + result.Version)
