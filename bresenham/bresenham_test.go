@@ -238,21 +238,3 @@ func TestPoly(t *testing.T) {
 	}
 	checkPNG(t, name, img)
 }
-
-/*
-func check(t *testing.T, as string, bs string, exp int) {
-	a := []byte(as);
-	b := []byte(bs);
-	dists := levenshtein(a, b)
-	dist := dists[len(a)][len(b)]
-	if exp != dist {
-		t.Fatalf("Expected: %v. Received: %v. Lev '%v' '%v'\n%v",
-			exp, dist, as, bs, printTable(as, bs, dists))
-	}
-	dist = Levenshtein(b, a)
-	if exp != dist {
-		t.Fatalf("Expected: %v. Received: %v. Lev '%v' '%v'\n%v",
-			exp, dist, bs, as, printTable(bs, as, dists))
-	}
-}
-*/

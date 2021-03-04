@@ -25,5 +25,5 @@ for PTR in "$@"; do
   fi
   echo "${PTR}, ${URL}"
   ## Download. Note: should check error list and re-try
-  # curl -sOJL --fail --max-time 7 "${URL}" || echo "${PTR}, ${URL}" >> ${ERRORS}
+  curl -sfOLJ --fail --max-time 7 "${URL}" || echo "${PTR}, ${URL}" >> ${ERRORS}
 done

@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	_ "image/jpeg"
+	"image/jpeg"
 	_ "image/png"
 	"log"
 	"os"
@@ -61,6 +61,14 @@ func convertToBLW(img []byte, raw []byte, rawName string) (*ocr.Detection, error
 			c = ocr.GCPClient{CredentialsPath: ""}
 		default:
 			return nil, fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
+		}
+		if img == nil {
+			bogus := new(bytes.Buffer)
+			err := jpeg.Encode(bogus, image.NewRGBA(image.Rect(0, 0, 1, 1)), nil)
+			if err != nil {
+				return nil, err
+			}
+			img = bogus.Bytes()
 		}
 		width, height, err := imgToWidthHeight(img)
 		if err != nil {

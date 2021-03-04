@@ -1,31 +1,45 @@
 #!/bin/bash
+# Generate a results.csv given a json or blw OCR results directory
+# There should only be files of one extension type (not multiple) in dir
+
+OUT="results.csv"
+
+tmpOUT=`mktemp`
+tmpAWS=`mktemp`
+tmpAzu=`mktemp`
+tmpGCP=`mktemp`
+tmpCOMM=`mktemp`
 
 if [ $# -ne 1 ]; then
-    echo "usage: ./combine.sh ocr_json_dir"
+    echo "usage: tigerocr-combine.sh json-dir/"
     exit 1
 fi
 
-# Create ocr.txt (list of all pointers which passed all 3 services)
-ls $1 | grep aws | cut -d. -f1 | sort | uniq > .aws.tmp
-ls $1 | grep azu | cut -d. -f1 | sort | uniq > .azu.tmp
-ls $1 | grep gcp | cut -d. -f1 | sort | uniq > .gcp.tmp
-comm -12 .aws.tmp .azu.tmp > .awsazu.tmp 
-comm -12 .awsazu.tmp .gcp.tmp > ocr.txt
-rm -f .aws.tmp .azu.tmp .gcp.tmp .awsazu.tmp 
+# Create list of all pointers which passed all 3 services
+ls $1 | grep aws | cut -d. -f1 | sort | uniq > $tmpAWS
+ls $1 | grep azu | cut -d. -f1 | sort | uniq > $tmpAzu
+ls $1 | grep gcp | cut -d. -f1 | sort | uniq > $tmpGCP
+tmp=`mktemp`
+comm -12 $tmpAWS $tmpAzu > $tmp
+comm -12 $tmp $tmpGCP > $tmpCOMM
+rm -f $tmpAWS $tmpAzu $tmpGCP $tmp
 
-# Create combined.csv (with all levenshtein distances and run times)
-for p in `cat ocr.txt`; do
-    rm -f .aws.tmp .azu.tmp .gcp.tmp
+# Create $OUT (with all levenshtein distances and run times)
+echo "ptr,AWS-Azu Lev,Azu-GCP Lev,GCP-AWS Lev,AWS Millis,Azu Millis,GCP Millis" > $tmpOUT
+for p in `cat $tmpCOMM`; do
+    rm -f $tmpAWS $tmpAzu $tmpGCP
     unset AWS_MILLIS AZU_MILLIS GCP_MILLIS AWS_AZU_LEV AZU_GCP_LEV GCP_AWS_LEV
-    tigerocr extract -text $1/${p}.jpg.aws.json > .aws.tmp
-    tigerocr extract -text $1/${p}.jpg.azure.json > .azu.tmp
-    tigerocr extract -text $1/${p}.jpg.gcp.json > .gcp.tmp
-    AWS_MILLIS=`tigerocr extract -speed $1/${p}.jpg.aws.json`
-    AZU_MILLIS=`tigerocr extract -speed $1/${p}.jpg.azure.json`
-    GCP_MILLIS=`tigerocr extract -speed $1/${p}.jpg.gcp.json`
-    AWS_AZU_LEV=`tigerocr editdist .aws.tmp .azu.tmp`
-    AZU_GCP_LEV=`tigerocr editdist .azu.tmp .gcp.tmp`
-    GCP_AWS_LEV=`tigerocr editdist .gcp.tmp .aws.tmp`
-    echo "$p,$AWS_AZU_LEV,$AWS_MILLIS,$AZU_GCP_LEV,$AZU_MILLIS,$GCP_AWS_LEV,$GCP_MILLIS" >> combined.csv
+    tigerocr extract -text $1/${p}*aws*> $tmpAWS
+    tigerocr extract -text $1/${p}*azu* > $tmpAzu
+    tigerocr extract -text $1/${p}*gcp* > $tmpGCP
+    AWS_MILLIS=`tigerocr extract -speed $1/${p}*aws*`
+    AZU_MILLIS=`tigerocr extract -speed $1/${p}*azu*`
+    GCP_MILLIS=`tigerocr extract -speed $1/${p}*gcp*`
+    AWS_AZU_LEV=`tigerocr editdist $tmpAWS $tmpAzu`
+    AZU_GCP_LEV=`tigerocr editdist $tmpAzu $tmpGCP`
+    GCP_AWS_LEV=`tigerocr editdist $tmpGCP $tmpAWS`
+    echo "$p,$AWS_AZU_LEV,$AZU_GCP_LEV,$GCP_AWS_LEV,$AWS_MILLIS,$AZU_MILLIS,$GCP_MILLIS" >> $tmpOUT
 done
-rm -f .aws.tmp .azu.tmp .gcp.tmp
+ruby -rcsv -e 'puts CSV.parse(STDIN).transpose.map &:to_csv' < $tmpOUT > $OUT
+
+rm -f $tmpOUT $tmpAWS $tmpAzu $tmpGCP $tmpCOMM

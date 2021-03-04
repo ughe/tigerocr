@@ -1,5 +1,5 @@
 #!/bin/bash
-# Get United States Report pdf URLs given the report id
+# Download United States Report pdfs given the report id
 set -e
 
 MAX_COUNT=1000
@@ -30,7 +30,7 @@ grep -q '"next": null,' $TMP || (echo "[ERROR] Expected fewer files (< $MAX_COUN
 TOTAL=$(grep -o '"shelf_id": "[A-Za-z0-9]*",' $TMP | wc -l)
 grep -o '"shelf_id": "[A-Za-z0-9]*",' $TMP | awk -F\" '{print $4}' | while read PTR; do
   URL="$(ptr_to_url $PTR)"
-  #echo "$PTR, $URL"
+  # echo "$PTR, $URL" # TODO: Uncomment this line to see all downloads
   curl -sfOL --max-time 30 "${URL}" || echo "${PTR}, ${URL}" >&2
 done
 rm $TMP

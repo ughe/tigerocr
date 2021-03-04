@@ -11,8 +11,7 @@ func extractCommand(filename string, stat, algoid, speed, date, text bool) error
 		return err
 	}
 	// Extraction never uses image width or height. So okay to use bogus
-	bogusImg := []byte("P3\n1 1\n1")
-	detection, err := convertToBLW(bogusImg, raw, filename)
+	detection, err := convertToBLW(nil, raw, filename)
 	if err != nil {
 		return err
 	}
