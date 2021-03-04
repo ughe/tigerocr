@@ -28,9 +28,9 @@ const FILE_PERM = 0444
 const DIR_PERM = 0755
 
 // Count pages in PDF using GhostScript executable
-func countPages(gs, pdf string) (int, error) {
+func countPages(gs, pdfPath string) (int, error) {
 	cmd := exec.Command(gs, "-q", "-dNOSAFER", "-dNODISPLAY", "-c",
-		"("+pdf+") (r) file runpdfbegin pdfpagecount = quit")
+		"("+pdfPath+") (r) file runpdfbegin pdfpagecount = quit")
 	out, err := cmd.Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
@@ -46,15 +46,15 @@ func countPages(gs, pdf string) (int, error) {
 }
 
 // Extract text from PDFs. No functionality for telling if it is useful
-func extractText(gs, pdf, dstPath string, pageCount int) error {
-	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
+func extractText(gs, pdfPath, dstPath string, pageCount int) error {
+	pdfName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
 	nDigits := strconv.Itoa(int(math.Ceil(math.Log10(float64(pageCount)))))
 	ptr := pdfName + "-%0" + nDigits + "d"
 	for i := 0; i < pageCount; i++ {
 		is := strconv.Itoa(i + 1) // gs uses page numbers from 1 instead of 0
 		dst := path.Join(dstPath, fmt.Sprintf(ptr, i)+".txt")
 		cmd := exec.Command(gs, "-q", "-sDEVICE=txtwrite", "-dBATCH", "-dNOPAUSE",
-			"-dFirstPage="+is, "-dLastPage="+is, "-sOutputFile="+dst, pdf)
+			"-dFirstPage="+is, "-dLastPage="+is, "-sOutputFile="+dst, pdfPath)
 		out, err := cmd.Output()
 		if err != nil {
 			if exitError, ok := err.(*exec.ExitError); ok {
@@ -75,12 +75,12 @@ func extractText(gs, pdf, dstPath string, pageCount int) error {
 }
 
 // Convert PDF to Image using ImageMagick executable. Returns list of pointers
-func convertPDF(magick []string, dstDir, pdf string, pageCount int) ([]string, error) {
-	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
+func convertPDF(magick []string, dstDir, pdfPath string, pageCount int) ([]string, error) {
+	pdfName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
 	nDigits := strconv.Itoa(int(math.Ceil(math.Log10(float64(pageCount)))))
 	ptr := pdfName + "-%0" + nDigits + "d"
 	out := path.Join(dstDir, ptr+"."+FMT)
-	magick = append(magick, "-density", fmt.Sprintf("%d", DPI), "-alpha", "off", "-quality", QUA, pdf, out)
+	magick = append(magick, "-density", fmt.Sprintf("%d", DPI), "-alpha", "off", "-quality", QUA, pdfPath, out)
 	_, err := exec.Command(magick[0], magick[1:]...).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
@@ -176,38 +176,38 @@ func execOCR(ptrs []string, services map[string]ocr.Client, artDir, imgsDir, ocr
 }
 
 // Creates the explorer website
-func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdf string) error {
+func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdfPath, baseDir string) error {
 	os.MkdirAll(path.Join("explorer", "js"), DIR_PERM)
 	os.MkdirAll(path.Join("explorer", "data"), DIR_PERM)
 
 	// Write Explorer website static files
-	indexDst := path.Join("explorer", "index.html")
+	indexDst := path.Join(baseDir, "index.html")
 	if err := ioutil.WriteFile(indexDst, explorer.Index, FILE_PERM); err != nil {
 		return err
 	}
-	styleDst := path.Join("explorer", "style.css")
+	styleDst := path.Join(baseDir, "style.css")
 	if err := ioutil.WriteFile(styleDst, explorer.Style, FILE_PERM); err != nil {
 		return err
 	}
-	mainDst := path.Join("explorer", "js", "main.js")
+	mainDst := path.Join(baseDir, "js", "main.js")
 	if err := ioutil.WriteFile(mainDst, explorer.Main, FILE_PERM); err != nil {
 		return err
 	}
-	gridDst := path.Join("explorer", "js", "grid.js")
+	gridDst := path.Join(baseDir, "js", "grid.js")
 	if err := ioutil.WriteFile(gridDst, explorer.Grid, FILE_PERM); err != nil {
 		return err
 	}
 
 	// Create config.csv
-	configDst := path.Join("explorer", "data", "config.csv")
-	pdfName := strings.TrimSuffix(filepath.Base(pdf), filepath.Ext(pdf))
+	configDst := path.Join(baseDir, "data", "config.csv")
+	pdfName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
 	config := fmt.Sprintf("title,%s Explorer\nimgs-fmt,%s\ntxts-dirs,%s\n[]links,Data;data/\n[]range,CER;0;1\n", pdfName, FMT, txtDirs)
 	if err := ioutil.WriteFile(configDst, []byte(config), FILE_PERM); err != nil {
 		return err
 	}
 
 	// Create results.csv
-	resultsDst := path.Join("explorer", "data", "results.csv")
+	resultsDst := path.Join(baseDir, "data", "results.csv")
 	results := make([]string, 0)
 	results = append(results, "ptr,"+strings.Join(ptrs, ","))
 	for k, v := range metrics {
@@ -242,9 +242,9 @@ func comm(a, b []string) []string {
 	return c
 }
 
-func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
+func exploreCommand(keys string, aws, azu, gcp bool, pdfPath string) error {
 	// Check pdf file exists
-	if _, err := os.Stat(pdf); err != nil {
+	if _, err := os.Stat(pdfPath); err != nil {
 		return err
 	}
 
@@ -280,23 +280,25 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	sort.Strings(providers)
 
 	// Check if explorer exists
-	_, err := os.Stat("explorer")
+	pdfName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
+	baseDir := fmt.Sprintf("explorer-%s", pdfName)
+	_, err := os.Stat(baseDir)
 	if err == nil || !os.IsNotExist(err) {
-		return fmt.Errorf("Will overwrite ./explorer directory. Pleae remove")
+		return fmt.Errorf("Please remove directory: ./%s", baseDir)
 	}
 
 	// Get number of pages
-	pc, err := countPages(gs, pdf)
+	pc, err := countPages(gs, pdfPath)
 	if err != nil {
 		return err
 	}
 
 	// Convert PDF to images
-	fmt.Printf("[INFO] PDF to %s (Total: %d) ... \t\t", FMT, pc)
+	fmt.Printf("[INFO] PDF to %s (Total: %d) ... \t\t", strings.ToUpper(FMT), pc)
 	start := time.Now()
-	imgsDir := path.Join("explorer", "data", "imgs")
+	imgsDir := path.Join(baseDir, "data", "imgs")
 	os.MkdirAll(imgsDir, DIR_PERM)
-	ptrs, err := convertPDF(magick, imgsDir, pdf, pc)
+	ptrs, err := convertPDF(magick, imgsDir, pdfPath, pc)
 	if err != nil {
 		return err
 	}
@@ -304,12 +306,12 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	fmt.Printf("%d secs\n", secs)
 
 	// Extract text from PDF
-	txtsDir := path.Join("explorer", "data", "txts")
+	txtsDir := path.Join(baseDir, "data", "txts")
 	dstPath := path.Join(txtsDir, "pdf")
 	os.MkdirAll(dstPath, DIR_PERM)
 	fmt.Printf("[INFO] PDF to TXT (Total: %d) ... \t\t", pc)
 	start = time.Now()
-	err = extractText(gs, pdf, dstPath, pc)
+	err = extractText(gs, pdfPath, dstPath, pc)
 	if err != nil {
 		return err
 	}
@@ -321,19 +323,19 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 	nCalls := len(ptrs) * len(services)
 	fmt.Printf("[ATTN] Estimate: $%.2f (%d ops). Run? [N/y]: \t", float64(nCalls)*estCost, nCalls)
 	var resp string
-	_, err = fmt.Scanf("%s\n", &resp)
+	_, err = fmt.Scanln(&resp)
 	if err != nil {
-		return err
+		resp = "" // Treat any err as an empty response
 	}
 	resp = strings.ToLower(strings.TrimSpace(resp))
 	if resp != "y" && resp != "yes" {
-		fmt.Printf("[DONE] OCR cancelled. Created explorer dir\n")
+		fmt.Printf("[DONE] OCR cancelled. Created directory: %s\n", baseDir)
 		return nil
 	}
 
 	fmt.Printf("[INFO] Executing OCR (Total: %d) ... \t\t", len(ptrs)*len(services))
 	start = time.Now()
-	artDir := path.Join("explorer", "data", "artifacts")
+	artDir := path.Join(baseDir, "data", "artifacts")
 	ocrDir := path.Join(artDir, "json")
 
 	results, err := execOCR(ptrs, services, artDir, imgsDir, ocrDir)
@@ -445,11 +447,11 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdf string) error {
 
 	// Create explorer
 	fmt.Printf("[INFO] Creating Explorer ... \t\t\t")
-	err = createExplorer(unified, metrics, txtDirs, pdf)
+	err = createExplorer(unified, metrics, txtDirs, pdfPath, baseDir)
 	fmt.Printf("done\n")
 
 	fmt.Printf("[INFO] Comparable Ptrs: %d (out of %d). %s\n", len(unified), len(ptrs), strings.Join(res, ", "))
-	fmt.Printf("[DONE] Run: tigerocr serve ./explorer\n")
+	fmt.Printf("[DONE] Run: tigerocr serve ./%s\n", baseDir)
 
 	return nil
 }
