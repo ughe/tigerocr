@@ -177,8 +177,8 @@ func execOCR(ptrs []string, services map[string]ocr.Client, artDir, imgsDir, ocr
 
 // Creates the explorer website
 func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdfPath, baseDir string) error {
-	os.MkdirAll(path.Join("explorer", "js"), DIR_PERM)
-	os.MkdirAll(path.Join("explorer", "data"), DIR_PERM)
+	os.MkdirAll(path.Join(baseDir, "js"), DIR_PERM)
+	os.MkdirAll(path.Join(baseDir, "data"), DIR_PERM)
 
 	// Write Explorer website static files
 	indexDst := path.Join(baseDir, "index.html")
