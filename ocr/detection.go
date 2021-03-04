@@ -46,19 +46,8 @@ type Bounds struct {
 	H int
 }
 
-// Helper objects
-type bBlock struct {
-	c float32
-	b Bounds
-	l []bLine
-}
-type bLine struct {
-	c float32
-	b Bounds
-	w []bWord
-}
+// Helper to avoid lots of bounds conversion
 type bWord struct {
-	c float32
 	b Bounds
 	t string
 }
@@ -267,7 +256,7 @@ func (d *Detection) Flatten() ([]bWord, error) {
 					return nil, err
 				}
 				bounds := Bounds{x0, y0, w0, h0}
-				ws = append(ws, bWord{w.Confidence, bounds, w.Text})
+				ws = append(ws, bWord{bounds, w.Text})
 			}
 		}
 	}
