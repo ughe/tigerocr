@@ -115,6 +115,7 @@ func (c AzureReadClient) Run(image []byte) (*Result, error) {
 	MAX_RESULT_TIMEOUTS := 15
 	var result azureReadResponse
 	for i := 0; i < MAX_RESULT_TIMEOUTS; i++ {
+		time.Sleep(1 * time.Second)
 		response, err = client.Do(req2)
 		milli = int64(time.Since(start) / time.Millisecond)
 		if err != nil {
@@ -138,8 +139,6 @@ func (c AzureReadClient) Run(image []byte) (*Result, error) {
 		if result.Status == statusSucceeded {
 			break
 		}
-
-		time.Sleep(1 * time.Second)
 	}
 	if result.Status != statusSucceeded {
 		return nil, fmt.Errorf("%s: timed-out waiting for a result. Last status was: %s for url: %s", result.Status, oploc)
