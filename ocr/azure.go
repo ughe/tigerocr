@@ -57,17 +57,15 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	credentialsFile := path.Join(c.CredentialsPath, keyName)
 	f, err := ioutil.ReadFile(credentialsFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: cannot read credentials: %s (%v)", service, credentialsFile, err)
 	}
 	credentials := &azureClientCredentials{}
 	err = json.Unmarshal(f, credentials)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: cannot parse credentials: %s (%v)", service, credentialsFile, err)
 	}
 	if credentials.Endpoint == "" || credentials.Key == "" {
-		err = fmt.Errorf("No 'subscription_key' or 'endpoint' in " +
-			credentialsFile)
-		return nil, err
+		return nil, fmt.Errorf("%s: missing credentials 'subscription_key' or 'endpoint' in %s", service, credentialsFile)
 	}
 
 	base := credentials.Endpoint + uriVersion
@@ -77,7 +75,7 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	client := &http.Client{Timeout: httpTimeout}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(image))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: configuration error: %v", service, err)
 	}
 	req.Header.Add("Content-Type", "application/octet-stream")
 	req.Header.Add("Ocp-Apim-Subscription-Key", credentials.Key)
@@ -86,22 +84,24 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 	response, err := client.Do(req)
 	milli := int64(time.Since(start) / time.Millisecond)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: OCR request failed - %v", service, err)
 	}
 	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		return nil, fmt.Errorf("%s: received status code %v (expected 200)", service, response.StatusCode)
+	}
 
 	responseJson, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: cannot read http response: %v", service, err)
 	}
 	result := azureVisionResponse{}
 	err = json.Unmarshal(responseJson, &result)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: cannot unmarshal json response: %v", service, err)
 	}
 	if result.StatusCode != "" {
-		err = fmt.Errorf("%v: %v", result.StatusCode, result.StatusMsg)
-		return nil, err
+		return nil, fmt.Errorf("%s: unexpected status code %v (%v)", service, result.StatusCode, result.StatusMsg)
 	}
 
 	var lines []string

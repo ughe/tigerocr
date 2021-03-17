@@ -42,7 +42,7 @@ func (c AWSClient) Run(image []byte) (*Result, error) {
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: configuration error: %v", service, err)
 	}
 	client := textract.New(s, &config)
 
@@ -57,7 +57,7 @@ func (c AWSClient) Run(image []byte) (*Result, error) {
 	result, err := client.DetectDocumentText(&ddti)
 	milli := int64(time.Since(start) / time.Millisecond)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: OCR request failed - %v", service, err)
 	}
 
 	version := *result.DetectDocumentTextModelVersion

@@ -35,21 +35,21 @@ func (c GCPClient) Run(file []byte) (*Result, error) {
 		option.WithCredentialsFile(credentialsFile),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: configuration error: %v", service, err)
 	}
 	defer client.Close()
 
 	fileReader := bytes.NewReader(file)
 	image, err := vision.NewImageFromReader(fileReader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: failed to read image bytes: %v", service, err)
 	}
 
 	start := time.Now()
 	annotation, err := client.DetectDocumentText(ctx, image, nil)
 	milli := int64(time.Since(start) / time.Millisecond)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: OCR request failed - %v", service, err)
 	}
 
 	// Extract full text
