@@ -57,10 +57,12 @@ func convertToBLW(img []byte, raw []byte, rawName string) (*ocr.Detection, error
 			c = ocr.AWSClient{CredentialsPath: ""}
 		case "Azure":
 			c = ocr.AzureClient{CredentialsPath: ""}
+		case "AzureRead":
+			c = ocr.AzureReadClient{CredentialsPath: ""}
 		case "GCP":
 			c = ocr.GCPClient{CredentialsPath: ""}
 		default:
-			return nil, fmt.Errorf("Service %v is not {AWS, Azure, GCP}", result.Service)
+			return nil, fmt.Errorf("Service %v is not {AWS, Azure, AzureRead, GCP}", result.Service)
 		}
 		if img == nil {
 			bogus := new(bytes.Buffer)
@@ -95,6 +97,7 @@ func main() {
 	azu_ins := "\nNote: Create a json file with 'subscription_key' and 'endpoint' items"
 	azu_help := "Key file: azure.json\nMore info: " + azu_ref + azu_ins
 	azuo := runSet.Bool("azure", false, "Run Azure CognitiveServices OCR. "+azu_help)
+	azuRo := runSet.Bool("azureR", false, "Run Azure CognitiveServices Read API.")
 	gcp_ref := "https://cloud.google.com/vision/docs/before-you-begin"
 	gcp_help := "Key file: gcp.json\nMore info: " + gcp_ref
 	gcpo := runSet.Bool("gcp", false, "Run GCP Vision OCR. "+gcp_help)
@@ -154,6 +157,7 @@ func main() {
 	xkeys := exploreSet.String("keys", path.Join(usr.HomeDir, ".aws"), "Path to credentials directory")
 	xawso := exploreSet.Bool("aws", false, "Run AWS Textract OCR. "+aws_help)
 	xazuo := exploreSet.Bool("azure", false, "Run Azure CognitiveServices OCR. "+azu_help)
+	xazuRo := exploreSet.Bool("azureR", false, "Run Azure CognitiveServices Read API.")
 	xgcpo := exploreSet.Bool("gcp", false, "Run GCP Vision OCR. "+gcp_help)
 	exploreSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s %s [-keys=~/keydir/] [-aws] [-azure] [-gcp] file.pdf\n\n", os.Args[0], os.Args[1])
@@ -194,12 +198,12 @@ func main() {
 			runSet.Usage()
 			os.Exit(1)
 		}
-		if !*awso && !*azuo && !*gcpo {
+		if !*awso && !*azuo && !*azuRo && !*gcpo {
 			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.\n")
 			runSet.Usage()
 			os.Exit(1)
 		}
-		err = runCommand(*keys, *awso, *azuo, *gcpo, runSet.Args())
+		err = runCommand(*keys, *awso, *azuo, *azuRo, *gcpo, runSet.Args())
 	case "annotate":
 		annotateSet.Parse(os.Args[2:])
 		if annotateSet.NArg() != 2 {
@@ -264,13 +268,13 @@ func main() {
 			exploreSet.Usage()
 			os.Exit(1)
 		}
-		if !*xawso && !*xazuo && !*xgcpo {
+		if !*xawso && !*xazuo && !*xazuRo && !*xgcpo {
 			fmt.Fprintf(os.Stderr, "Error: No service(s) selected.\n")
 			exploreSet.Usage()
 			os.Exit(1)
 		}
 		pdfName := exploreSet.Arg(0)
-		err = exploreCommand(*xkeys, *xawso, *xazuo, *xgcpo, pdfName)
+		err = exploreCommand(*xkeys, *xawso, *xazuo, *xazuRo, *xgcpo, pdfName)
 	case "serve":
 		serveSet.Parse(os.Args[2:])
 		if serveSet.NArg() > 1 {

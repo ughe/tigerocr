@@ -62,13 +62,16 @@ func runOCR(imgPath, dstPath string, stdout, stderr *log.Logger, services map[st
 }
 
 // Return clients for each service. Map keys will appear in output files
-func initServices(keys string, aws, azu, gcp bool) map[string]ocr.Client {
+func initServices(keys string, aws, azu, azuR, gcp bool) map[string]ocr.Client {
 	m := make(map[string]ocr.Client, 3)
 	if aws {
 		m["aws"] = ocr.AWSClient{CredentialsPath: keys}
 	}
 	if azu {
 		m["azu"] = ocr.AzureClient{CredentialsPath: keys}
+	}
+	if azuR {
+		m["azuR"] = ocr.AzureReadClient{CredentialsPath: keys}
 	}
 	if gcp {
 		m["gcp"] = ocr.GCPClient{CredentialsPath: keys}
@@ -77,8 +80,8 @@ func initServices(keys string, aws, azu, gcp bool) map[string]ocr.Client {
 }
 
 // Executes OCR for each of the services on each filename
-func runCommand(keys string, aws, azu, gcp bool, filenames []string) error {
-	m := initServices(keys, aws, azu, gcp)
+func runCommand(keys string, aws, azu, azuR, gcp bool, filenames []string) error {
+	m := initServices(keys, aws, azu, azuR, gcp)
 
 	wd, err := os.Getwd()
 	if err != nil {

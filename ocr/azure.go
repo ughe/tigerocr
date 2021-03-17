@@ -43,6 +43,22 @@ type AzureClient struct {
 	CredentialsPath string
 }
 
+func loadCredentials(path string) (*azureClientCredentials, error) {
+	credentials := &azureClientCredentials{}
+	f, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(f, credentials)
+	if err != nil {
+		return nil, err
+	}
+	if credentials.Endpoint == "" || credentials.Key == "" {
+		return nil, fmt.Errorf("missing 'subscription_key' or 'endpoint'")
+	}
+	return credentials, nil
+}
+
 // Method required by ocr.Client
 // Returns Azure document text detection Result
 // Example: https://docs.microsoft.com/en-us/azure/cognitive-services/computer-vision/quickstarts/go-print-text
@@ -54,18 +70,10 @@ func (c AzureClient) Run(image []byte) (*Result, error) {
 		httpTimeout = time.Second * 15
 	)
 
-	credentialsFile := path.Join(c.CredentialsPath, keyName)
-	f, err := ioutil.ReadFile(credentialsFile)
+	credentialsPath := path.Join(c.CredentialsPath, keyName)
+	credentials, err := loadCredentials(credentialsPath)
 	if err != nil {
-		return nil, fmt.Errorf("%s: cannot read credentials: %s (%v)", service, credentialsFile, err)
-	}
-	credentials := &azureClientCredentials{}
-	err = json.Unmarshal(f, credentials)
-	if err != nil {
-		return nil, fmt.Errorf("%s: cannot parse credentials: %s (%v)", service, credentialsFile, err)
-	}
-	if credentials.Endpoint == "" || credentials.Key == "" {
-		return nil, fmt.Errorf("%s: missing credentials 'subscription_key' or 'endpoint' in %s", service, credentialsFile)
+		return nil, fmt.Errorf("%s: cannot read credentials: %s (%v)", service, credentialsPath, err)
 	}
 
 	base := credentials.Endpoint + uriVersion

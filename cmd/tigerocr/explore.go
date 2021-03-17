@@ -242,7 +242,7 @@ func comm(a, b []string) []string {
 	return c
 }
 
-func exploreCommand(keys string, aws, azu, gcp bool, pdfPath string) error {
+func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error {
 	// Check pdf file exists
 	if _, err := os.Stat(pdfPath); err != nil {
 		return err
@@ -271,7 +271,7 @@ func exploreCommand(keys string, aws, azu, gcp bool, pdfPath string) error {
 	}
 
 	// Set up OCR Clients
-	services := initServices(keys, aws, azu, gcp)
+	services := initServices(keys, aws, azu, azuR, gcp)
 	// Sort the services alphabetically
 	providers := make([]string, 0, len(services))
 	for s, _ := range services {

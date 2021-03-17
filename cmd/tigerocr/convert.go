@@ -34,7 +34,7 @@ func convert(imgFilename, jsnFilename, basename string) (string, error) {
 		return "", err
 	}
 
-	dstFilename := path.Join(basename, strings.TrimSuffix(filepath.Base(imgFilename), filepath.Ext(imgFilename))+"."+strings.ToLower(detection.AlgoID)[:3]+".blw")
+	dstFilename := path.Join(basename, strings.TrimSuffix(filepath.Base(imgFilename), filepath.Ext(imgFilename))+"."+strings.ToLower(detection.AlgoID)+".blw")
 
 	if err := ioutil.WriteFile(dstFilename, encoded, 0600); err != nil {
 		return "", err
