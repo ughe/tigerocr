@@ -9,13 +9,12 @@ import sys
 import webbrowser
 
 # BEGIN configuration
-providers = ["aws", "azu", "gcp"]
+colors = ["orange", "blue", "red", "cyan", "green", "purple"]
 metrics = ["cer", "millis"]
 convert = [
         lambda x: min(max(float(x), 0), 1),
         lambda x: min(max(int(x)/1000, 0), 12),
 ]
-providersAxis = ["AWS", "Azure", "GCP"]
 metricsAxis = ["CER", "Time"]
 metricsAxisFull = ["Character Error Rate (CER)", "Time [Seconds]"]
 metricFmt = ["%.05f", "%d"]
@@ -36,39 +35,37 @@ def init_ax(ax, title, max_time=12, max_dist=1):
 
 def main(fname, outf, title):
     data = [x.split(",") for x in open(fname, "r").read().strip().split("\n")]
+    ps = []
     res = {}
     for m in metrics:
         res[m] = {}
     for row in data:
-        lbl = row[0].lower()
+        lbl = row[0]
         for i, m in enumerate(metrics):
             c = convert[i]
-            if m in lbl:
-                for p in providers:
-                    if p in lbl:
-                        res[m][p] = [c(x) for x in row[1:]]
+            if m in lbl.lower():
+                basename = lbl.split(" " + m)[0].split(" ")[0]
+                if basename not in ps:
+                    ps.append(basename)
+                res[m][basename] = [c(x) for x in row[1:]]
 
     m0, m1 = metrics[0], metrics[1]
-    ps = sorted(providers)
+    intersection_ps = list(set(res[m0].keys()) & set(res[m1].keys()))
+    ps = [x for x in ps if x in intersection_ps]
     size = len(res[m0][ps[0]])
-    p0 = [res[m0][ps[0]], res[m1][ps[0]]]
-    p1 = [res[m0][ps[1]], res[m1][ps[1]]]
-    p2 = [res[m0][ps[2]], res[m1][ps[2]]]
+    pxs = [[res[m0][p], res[m1][p]] for p in ps]
 
     fig = plt.figure(figsize=(8, 6), dpi=300, constrained_layout=True)
-    spec = gridspec.GridSpec(ncols=2, nrows=3, height_ratios=[1, 1, 1],
+    spec = gridspec.GridSpec(ncols=2, nrows=len(ps), height_ratios=[1]*len(ps),
             width_ratios=[4, 1], figure=fig)
-    ax0 = fig.add_subplot(spec[0, 1])
-    ax1 = fig.add_subplot(spec[1, 1])
-    ax2 = fig.add_subplot(spec[2, 1])
+    axs = []
+    for i in range(len(ps)):
+        axs.append(fig.add_subplot(spec[i, 1]))
     ax = fig.add_subplot(spec[0:, 0])
 
-    init_ax(ax0, providersAxis[0])
-    init_ax(ax1, providersAxis[1])
-    init_ax(ax2, providersAxis[2])
-    ax0.scatter(*p0, color="orange", s=.001, label=providersAxis[0])
-    ax1.scatter(*p1, color="blue", s=.001, label=providersAxis[1])
-    ax2.scatter(*p2, color="red", s=.001, label=providersAxis[2])
+    for i in range(len(ps)):
+        init_ax(axs[i], ps[i])
+        axs[i].scatter(*pxs[i], color=colors[i], s=.001, label=ps[i])
 
     maxy = 12
     ax.set_xlim(1.0, 0)
@@ -81,9 +78,9 @@ def main(fname, outf, title):
     ax.grid(linewidth=1, alpha=0.2)
     ax.set_xlabel(metricsAxisFull[0])
     ax.set_ylabel(metricsAxisFull[1])
-    ax.scatter(*p0, color="orange", s=1, label=providersAxis[0])
-    ax.scatter(*p1, color="blue", s=1, label=providersAxis[1])
-    ax.scatter(*p2, color="red", s=1, label=providersAxis[2])
+
+    for i in range(len(ps)):
+        ax.scatter(*pxs[i], color=colors[i], s=1, label=ps[i])
 
     plt.close()
     save(fig, outf)
@@ -94,18 +91,17 @@ def printQuartiles(fname):
     for m in metrics:
         res[m] = {}
     for row in data:
-        lbl = row[0].lower()
+        lbl = row[0]
         for m in metrics:
-            if m in lbl:
-                for p in providers:
-                    if p in lbl:
-                        res[m][p] = [float(x) for x in row[1:]]
+            if m in lbl.lower():
+                basename = lbl.split(" " + m)[0].split(" ")[0]
+                res[m][basename] = [float(x) for x in row[1:]]
 
     # Print out the quantiles
     print("Quartiles:\tmin, Q1, med, Q2, max")
     qs = [0, 25, 50, 75, 100]
     for i, m in enumerate(metrics):
-        for p in providers:
+        for p in sorted(list(res[m].keys())):
             q = np.percentile(res[m][p], qs)
             print(p + " " + m + ":\t" + ((metricFmt[i] + ", ")*len(qs) % (q[0], q[1], q[2], q[3], q[4])))
 
