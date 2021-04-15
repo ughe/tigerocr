@@ -141,7 +141,7 @@ func (c AzureReadClient) Run(image []byte) (*Result, error) {
 		}
 	}
 	if result.Status != statusSucceeded {
-		return nil, fmt.Errorf("%s: timed-out waiting for a result. Last status was: %s for url: %s", result.Status, oploc)
+		return nil, fmt.Errorf("%s: timed-out waiting for a result. Last status was: %s for url: %s", service, result.Status, oploc)
 	}
 
 	// Parse the associated times from the result to get operation duration
