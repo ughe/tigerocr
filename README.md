@@ -49,8 +49,19 @@ The commands are:
 	serve   	 serve current directory at 127.0.0.1:8080
 ```
 
-## OCR PDF
+## Example
 
 ```
-tigerocr explore -keys ~/.aws -aws -azure -azureR -gcp book.pdf
+$ tigerocr explore -keys ~/.aws -aws -azure -azureR -gcp book.pdf
+[INFO] PDF to PNG (Total: 20) ... 		32 secs
+[INFO] PDF to TXT (Total: 20) ... 		9 secs
+[ATTN] Estimate: $0.12 (80 ops). Run? [N/y]: 	y
+[INFO] Executing OCR (Total: 80) ... 		56 secs
+[INFO] JSON to BLW (Total: 80) ... 		5 secs
+[INFO] BLW to TXT ... 				0 secs
+[INFO] Running Levenshtein Distance ... 	1 secs
+[INFO] Creating Explorer ... 			done
+[INFO] Comparable Ptrs: 20 (out of 20). aws: 20, azu: 20, azuR: 20, gcp: 20
+[DONE] Run: tigerocr serve ./explorer-book
+$ tigerocr serve ./explorer-book
 ```
