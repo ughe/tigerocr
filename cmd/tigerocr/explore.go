@@ -433,11 +433,11 @@ func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error
 	metricLimits := make([]string, 0)
 
 	// Levenshtein distance for each pair of providers
+	fmt.Printf("[INFO] Running Levenshtein Distance ... \t")
+	start = time.Now()
+	firstLoop := true
+	minl, maxl := 0, 0
 	if len(providers) > 1 {
-		fmt.Printf("[INFO] Running Levenshtein Distance ... \t\t")
-		start = time.Now()
-		firstLoop := true
-		minl, maxl := 0, 0
 		for i := 0; i < len(providers); i++ {
 			if len(providers) == 2 && i == 1 {
 				break // Don't compare twice if only 2
@@ -465,14 +465,42 @@ func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error
 					maxl = dist
 				}
 			}
-			name := fmt.Sprintf("%s vs. %s", s1, s2)
+			name := fmt.Sprintf("%s vs %s", s1, s2)
 			metrics[name] = levs
 			metricOrder = append(metricOrder, name)
 		}
-		metricLimits = append(metricLimits, fmt.Sprintf(" vs. ;%d;%d", minl, maxl))
-		secs = int(time.Since(start) / time.Second)
-		fmt.Printf("%d secs\n", secs)
 	}
+	// Compare PDF to first provider
+	levs := make([]string, 0, len(unified))
+	s1 := strings.ToUpper(providers[0])
+	s2 := "PDF"
+	for _, ptr := range unified {
+		bufa, err := ioutil.ReadFile(path.Join(txtsDir, s1, ptr+".txt"))
+		if err != nil {
+			return err
+		}
+		bufb, err := ioutil.ReadFile(path.Join(txtsDir, s2, ptr+".txt"))
+		if err != nil {
+			return err
+		}
+		dist := editdist.Levenshtein(bufa, bufb)
+		levs = append(levs, strconv.Itoa(dist))
+		if firstLoop {
+			minl, maxl = dist, dist
+			firstLoop = false
+		} else if dist < minl {
+			minl = dist
+		} else if dist > maxl {
+			maxl = dist
+		}
+	}
+	name := fmt.Sprintf("%s vs %s", s1, s2)
+	metrics[name] = levs
+	metricOrder = append(metricOrder, name)
+
+	metricLimits = append(metricLimits, fmt.Sprintf(" vs ;%d;%d", minl, maxl))
+	secs = int(time.Since(start) / time.Second)
+	fmt.Printf("%d secs\n", secs) // Finished Levenshtein
 
 	// Time
 	mint, maxt := math.Inf(1), math.Inf(-1)
@@ -498,10 +526,10 @@ func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error
 	metricLimits = append(metricLimits, fmt.Sprintf("Seconds;%.2f;%2.f", mint, maxt))
 
 	// Word Count
-	fmt.Printf("[INFO] Running Word Count ... \t\t\t")
-	start = time.Now()
+	//fmt.Printf("[INFO] Running Word Count ... \t\t\t")
+	//start = time.Now()
 	// Count PDF words
-	firstLoop := true
+	firstLoop = true
 	minwc, maxwc := 0, 0
 	wc := make([]string, 0, len(unified))
 	for _, ptr := range unified {
@@ -520,33 +548,35 @@ func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error
 		}
 		wc = append(wc, strconv.Itoa(count))
 	}
-	name := "PDF Word Count"
+	name = "PDF Word Count"
 	metrics[name] = wc
 	metricOrder = append(metricOrder, name)
-	// Count words for each provider
-	for _, s := range providers {
-		wc := make([]string, 0, len(unified))
-		for _, ptr := range unified {
-			buf, err := ioutil.ReadFile(path.Join(txtsDir, strings.ToUpper(s), ptr+".txt"))
-			if err != nil {
-				return err
+	/*
+		// Count words for each provider
+		for _, s := range providers {
+			wc := make([]string, 0, len(unified))
+			for _, ptr := range unified {
+				buf, err := ioutil.ReadFile(path.Join(txtsDir, strings.ToUpper(s), ptr+".txt"))
+				if err != nil {
+					return err
+				}
+				count := len(strings.Fields(string(buf)))
+				if count < minwc {
+					minwc = count
+				}
+				if count > maxwc {
+					maxwc = count
+				}
+				wc = append(wc, strconv.Itoa(count))
 			}
-			count := len(strings.Fields(string(buf)))
-			if count < minwc {
-				minwc = count
-			}
-			if count > maxwc {
-				maxwc = count
-			}
-			wc = append(wc, strconv.Itoa(count))
+			name := fmt.Sprintf("%s Word Count", strings.ToUpper(s))
+			metrics[name] = wc
+			metricOrder = append(metricOrder, name)
 		}
-		name := fmt.Sprintf("%s Word Count", strings.ToUpper(s))
-		metrics[name] = wc
-		metricOrder = append(metricOrder, name)
-	}
+	*/
 	metricLimits = append(metricLimits, fmt.Sprintf("Word Count;%d;%d", minwc, maxwc))
-	secs = int(time.Since(start) / time.Second)
-	fmt.Printf("%d secs\n", secs)
+	//secs = int(time.Since(start) / time.Second)
+	//fmt.Printf("%d secs\n", secs)
 
 	// Create explorer
 	fmt.Printf("[INFO] Creating Explorer ... \t\t\t")
