@@ -14,7 +14,7 @@ import (
 	"github.com/ughe/tigerocr/ocr"
 )
 
-func convert(imgFilename, jsnFilename, basename string) (string, error) {
+func convert(imgFilename, jsnFilename, dstPath string) (string, error) {
 	img, err := ioutil.ReadFile(imgFilename)
 	if err != nil {
 		return "", err
@@ -34,7 +34,8 @@ func convert(imgFilename, jsnFilename, basename string) (string, error) {
 		return "", err
 	}
 
-	dstFilename := path.Join(basename, strings.TrimSuffix(filepath.Base(imgFilename), filepath.Ext(imgFilename))+"."+strings.ToLower(detection.AlgoID)+".blw")
+	// Output to dstPath with jsnFilename 's/json/blw/'
+	dstFilename := path.Join(dstPath, strings.TrimSuffix(filepath.Base(jsnFilename), filepath.Ext(jsnFilename))+".blw")
 
 	if err := ioutil.WriteFile(dstFilename, encoded, 0600); err != nil {
 		return "", err
