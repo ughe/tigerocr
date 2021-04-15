@@ -1,5 +1,5 @@
 #!/bin/bash
-# Download United States Report pdfs given the report id
+# Download United States Report pdfs given the report volume number
 set -e
 
 MAX_COUNT=1000

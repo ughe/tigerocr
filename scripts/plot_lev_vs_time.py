@@ -98,7 +98,7 @@ def printQuartiles(fname):
                 res[m][basename] = [float(x) for x in row[1:]]
 
     # Print out the quantiles
-    print("Quartiles:\tmin, Q1, med, Q2, max")
+    print("Quartiles:\tmin, Q1, med, Q3, max")
     qs = [0, 25, 50, 75, 100]
     for i, m in enumerate(metrics):
         for p in sorted(list(res[m].keys())):
