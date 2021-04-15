@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/ughe/explorer"
+	"github.com/ughe/tigerocr/editdist"
 	"github.com/ughe/tigerocr/ocr"
 )
 
@@ -176,7 +177,7 @@ func execOCR(ptrs []string, services map[string]ocr.Client, artDir, imgsDir, ocr
 }
 
 // Creates the explorer website
-func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdfPath, baseDir string) error {
+func createExplorer(ptrs []string, metrics map[string][]string, metricLimits, metricOrder []string, txtDirs, pdfPath, baseDir string) error {
 	os.MkdirAll(path.Join(baseDir, "js"), DIR_PERM)
 	os.MkdirAll(path.Join(baseDir, "data"), DIR_PERM)
 
@@ -201,7 +202,7 @@ func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdfPath
 	// Create config.csv
 	configDst := path.Join(baseDir, "data", "config.csv")
 	pdfName := strings.TrimSuffix(filepath.Base(pdfPath), filepath.Ext(pdfPath))
-	config := fmt.Sprintf("title,%s Explorer\nimgs-fmt,%s\ntxts-dirs,%s\n[]links,Data;data/\n[]range,CER;0;1\n", pdfName, FMT, txtDirs)
+	config := fmt.Sprintf("title,%s Explorer\nimgs-fmt,%s\ntxts-dirs,%s\n[]links,Data;data/\n[]range,CER;0;1\n%s", pdfName, FMT, txtDirs, strings.Join(metricLimits, "\n"))
 	if err := ioutil.WriteFile(configDst, []byte(config), FILE_PERM); err != nil {
 		return err
 	}
@@ -210,8 +211,8 @@ func createExplorer(ptrs []string, metrics map[string][]string, txtDirs, pdfPath
 	resultsDst := path.Join(baseDir, "data", "results.csv")
 	results := make([]string, 0)
 	results = append(results, "ptr,"+strings.Join(ptrs, ","))
-	for k, v := range metrics {
-		results = append(results, k+","+strings.Join(v, ","))
+	for _, k := range metricOrder {
+		results = append(results, k+","+strings.Join(metrics[k], ","))
 	}
 	resultBytes := []byte(strings.Join(results, "\n"))
 	if err := ioutil.WriteFile(resultsDst, resultBytes, FILE_PERM); err != nil {
@@ -379,7 +380,7 @@ func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error
 	fmt.Printf("%d secs\n", secs)
 
 	// Extract TXT
-	txtDirs := "pdf"
+	txtDirs := "PDF"
 	fmt.Printf("[INFO] BLW to TXT ... \t\t\t\t")
 	start = time.Now()
 	for s, ptr_ := range results {
@@ -426,28 +427,130 @@ func exploreCommand(keys string, aws, azu, azuR, gcp bool, pdfPath string) error
 	}
 	sort.Strings(unified)
 
-	// TODO: Run Levenshtein
-
 	// Create metrics
-	fmt.Printf("[INFO] Creating Metrics ... \t\t\t")
-	start = time.Now()
+	metricOrder := make([]string, 0) // metric keys in order
 	metrics := make(map[string][]string)
+	metricLimits := make([]string, 0)
+
+	// Levenshtein distance for each pair of providers
+	if len(providers) > 1 {
+		fmt.Printf("[INFO] Running Levenshtein Distance ... \t\t")
+		start = time.Now()
+		firstLoop := true
+		minl, maxl := 0, 0
+		for i := 0; i < len(providers); i++ {
+			if len(providers) == 2 && i == 1 {
+				break // Don't compare twice if only 2
+			}
+			// Run between provider i and i+1
+			s1, s2 := strings.ToUpper(providers[i]), strings.ToUpper(providers[(i+1)%len(providers)])
+			levs := make([]string, 0, len(unified))
+			for _, ptr := range unified {
+				bufa, err := ioutil.ReadFile(path.Join(txtsDir, s1, ptr+".txt"))
+				if err != nil {
+					return err
+				}
+				bufb, err := ioutil.ReadFile(path.Join(txtsDir, s2, ptr+".txt"))
+				if err != nil {
+					return err
+				}
+				dist := editdist.Levenshtein(bufa, bufb)
+				levs = append(levs, strconv.Itoa(dist))
+				if firstLoop {
+					minl, maxl = dist, dist
+					firstLoop = false
+				} else if dist < minl {
+					minl = dist
+				} else if dist > maxl {
+					maxl = dist
+				}
+			}
+			name := fmt.Sprintf("%s vs. %s", s1, s2)
+			metrics[name] = levs
+			metricOrder = append(metricOrder, name)
+		}
+		metricLimits = append(metricLimits, fmt.Sprintf(" vs. ;%d;%d", minl, maxl))
+		secs = int(time.Since(start) / time.Second)
+		fmt.Printf("%d secs\n", secs)
+	}
+
 	// Time
+	mint, maxt := math.Inf(1), math.Inf(-1)
 	for _, s := range providers {
 		name := fmt.Sprintf("%s Seconds", strings.ToUpper(s))
 		fields := make([]string, 0, len(unified))
 		for _, ptr := range unified {
+			f, err := strconv.ParseFloat(results[s][ptr], 64)
+			if err != nil {
+				return err
+			}
+			if f < mint {
+				mint = f
+			}
+			if f > maxt {
+				maxt = f
+			}
 			fields = append(fields, results[s][ptr])
 		}
 		metrics[name] = fields
+		metricOrder = append(metricOrder, name)
 	}
-	// TODO: CER, Character Count
+	metricLimits = append(metricLimits, fmt.Sprintf("Seconds;%.2f;%2.f", mint, maxt))
+
+	// Word Count
+	fmt.Printf("[INFO] Running Word Count ... \t\t\t")
+	start = time.Now()
+	// Count PDF words
+	firstLoop := true
+	minwc, maxwc := 0, 0
+	wc := make([]string, 0, len(unified))
+	for _, ptr := range unified {
+		buf, err := ioutil.ReadFile(path.Join(txtsDir, "PDF", ptr+".txt"))
+		if err != nil {
+			return err
+		}
+		count := len(strings.Fields(string(buf)))
+		if firstLoop { // Set initial min, max in first loop
+			minwc, maxwc = count, count
+			firstLoop = false
+		} else if count < minwc {
+			minwc = count
+		} else if count > maxwc {
+			maxwc = count
+		}
+		wc = append(wc, strconv.Itoa(count))
+	}
+	name := "PDF Word Count"
+	metrics[name] = wc
+	metricOrder = append(metricOrder, name)
+	// Count words for each provider
+	for _, s := range providers {
+		wc := make([]string, 0, len(unified))
+		for _, ptr := range unified {
+			buf, err := ioutil.ReadFile(path.Join(txtsDir, strings.ToUpper(s), ptr+".txt"))
+			if err != nil {
+				return err
+			}
+			count := len(strings.Fields(string(buf)))
+			if count < minwc {
+				minwc = count
+			}
+			if count > maxwc {
+				maxwc = count
+			}
+			wc = append(wc, strconv.Itoa(count))
+		}
+		name := fmt.Sprintf("%s Word Count", strings.ToUpper(s))
+		metrics[name] = wc
+		metricOrder = append(metricOrder, name)
+	}
+	metricLimits = append(metricLimits, fmt.Sprintf("Word Count;%d;%d", minwc, maxwc))
 	secs = int(time.Since(start) / time.Second)
 	fmt.Printf("%d secs\n", secs)
 
 	// Create explorer
 	fmt.Printf("[INFO] Creating Explorer ... \t\t\t")
-	err = createExplorer(unified, metrics, txtDirs, pdfPath, baseDir)
+	err = createExplorer(unified, metrics, metricLimits, metricOrder, txtDirs, pdfPath, baseDir)
 	fmt.Printf("done\n")
 
 	fmt.Printf("[INFO] Comparable Ptrs: %d (out of %d). %s\n", len(unified), len(ptrs), strings.Join(res, ", "))
