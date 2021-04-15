@@ -166,9 +166,9 @@ func TestLineAngles(t *testing.T) {
 	origin := image.Point{2 * p, dim - 2*p} // Bottom left
 	w := dim - p*4
 
-	h30 := int(math.Tan(math.Pi/6) * float64(w))   // 30 degrees
+	h30 := int(math.Tan(math.Pi/6) * float64(w)) // 30 degrees
 	p30 := image.Point{origin.X + w, origin.Y - h30}
-	h45 := int(math.Tan(math.Pi/4) * float64(w))   // 45 degrees
+	h45 := int(math.Tan(math.Pi/4) * float64(w)) // 45 degrees
 	p45 := image.Point{origin.X + w, origin.Y - h45}
 	h60 := int(math.Tan(math.Pi/3) * float64(w/2)) // 60 degrees
 	p60 := image.Point{origin.X + w/2, origin.Y - h60}
@@ -187,9 +187,9 @@ func TestLineTriangle(t *testing.T) {
 	name := "TestLineTriangle.png"
 	img := blankImage(dim, dim)
 	p := 30
-	p0 := image.Point{dim/2, p}
-	p1 := image.Point{p, dim-p}
-	p2 := image.Point{dim-p, dim-p}
+	p0 := image.Point{dim / 2, p}
+	p1 := image.Point{p, dim - p}
+	p2 := image.Point{dim - p, dim - p}
 	Line(img, p0, p1, colors[0], 1)
 	Line(img, p1, p2, colors[0], 1)
 	Line(img, p2, p0, colors[0], 1)
@@ -215,11 +215,11 @@ func TestRectBricks(t *testing.T) {
 	img := blankImage(dim, dim)
 	p := 15
 	cols := 7
-	h := (dim-p) / (len(colors)*2)
-	w := (dim-p) / cols
+	h := (dim - p) / (len(colors) * 2)
+	w := (dim - p) / cols
 	for r := 0; r < len(colors)*2; r++ {
 		for c := 0; c < cols; c++ {
-			Rect(img, image.Point{p+c*w, p+r*h}, w - p, h - p, colors[r / 2], 2)
+			Rect(img, image.Point{p + c*w, p + r*h}, w-p, h-p, colors[r/2], 2)
 		}
 	}
 	checkPNG(t, name, img)

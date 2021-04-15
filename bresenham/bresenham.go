@@ -69,7 +69,7 @@ func Line(img draw.Image, p0, p1 image.Point, c color.Color, weight int) {
 		if x == x1 && y == y1 {
 			break
 		}
-		acc2 := 2*acc
+		acc2 := 2 * acc
 		if acc2 >= dy {
 			acc += dy
 			x += sx

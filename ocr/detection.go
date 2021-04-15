@@ -25,18 +25,18 @@ type Detection struct {
 }
 
 type Block struct {
-	Bounds     string  `json:"xywh"`
-	Lines      []Line  `json:"lines"`
+	Bounds string `json:"xywh"`
+	Lines  []Line `json:"lines"`
 }
 
 type Line struct {
-	Bounds     string  `json:"xywh"`
-	Words      []Word  `json:"words"`
+	Bounds string `json:"xywh"`
+	Words  []Word `json:"words"`
 }
 
 type Word struct {
-	Bounds     string  `json:"xywh"`
-	Text       string  `json:"text"`
+	Bounds string `json:"xywh"`
+	Text   string `json:"text"`
 }
 
 type Bounds struct {
