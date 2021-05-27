@@ -6,6 +6,9 @@ bin/*
 *~
 \#*\#
 
+# Specific binary
+unutf_ſ
+
 # CXX
 *.dSYM
 *.gch
