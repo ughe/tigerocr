@@ -29,7 +29,7 @@ comm -23 $tmp1 ${2-/dev/null} | v10spell > $tmp2
 >&2 cat $tmp2
 
 # Write SER to stdout
-echo "`wc -w < $tmp2`,`wc -w < $tmp1`" | awk -F, '{print ($2==0?($1==0?1:0):$1/$2)}'
+echo "`wc -w < $tmp2`,`wc -w < $tmp1`" | awk -F, '{print ($2==0?($1==0?0:1):$1/$2)}'
 
 # Cleanup
 rm -f $tmp1 ; rm -f $tmp2

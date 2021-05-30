@@ -18,3 +18,16 @@ ser.sh file.txt stoplist.txt 2> misspelled.txt
 ```
 
 Install `ser.sh` to the `$GOPATH/bin` or `/usr/local/bin` using `make install`.
+
+## Long Example
+
+```
+P=(AWS AzureOCR GCP AzureRead macOS Tesseract)
+SRC=~/obo.cs.princeton.edu/data2021/oldbailey/txts/
+for s in $P; do echo $s && ls ${SRC}/$s > ls_${s}.txt ; time cat ls_${s}.txt | while read f ; do ser.sh $SRC/$s/$f stoplist_ob21.txt 2>> spell_mistakes_${s}.txt >> spell_ser_${s}.txt ; done ; done
+
+for s in $P; do echo $s ; paste -d, ls_${s}.txt spell_ser_${s}.txt > _${s} ; done
+
+printf "ptr" ; for d in $P ; do printf ",$d SER" ; done ; printf "\n" > _ser.txt
+joins.sh `for s in $P; do printf "_$s " ; done` | sed 's/\.txt//' | awk -F, '{printf "%s,",$1 ; for (i=2;i<NF;i++) { if(length($i) > 7){printf "%.5f,", $i}else{printf "%s,", $i} } ; if(length($NF) > 7) {printf "%.5f\n", $NF}else{printf "%s\n", $NF}}' >> _ser.txt
+```
